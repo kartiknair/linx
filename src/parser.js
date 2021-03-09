@@ -348,7 +348,17 @@ class Parser {
 
 		while (true) {
 			if (this.match('LEFT_PAREN')) expr = this.finishCall(expr)
-			else break
+			else if (this.match('DOT')) {
+				const name = this.consume(
+					'IDENTIFIER',
+					"Expect property name after '.'."
+				)
+				expr = {
+					object: expr,
+					ident: name,
+					type: 'GetExpression',
+				}
+			} else break
 		}
 
 		return expr

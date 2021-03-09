@@ -37,4 +37,18 @@ let fnExpressionTest = `
 		print sum(34, 54)
 `
 
-interpret(fnExpressionTest)
+let fieldAccessTest = `
+		p := {
+			name: "john doe",
+			age: 45,
+			greeting: fn () {
+				return "hi there, i'm john doe!"
+			}
+		}
+
+		print p.name
+		print p.age
+		print p.greeting()
+`
+
+interpret(fieldAccessTest)

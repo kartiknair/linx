@@ -132,6 +132,14 @@ const evalVisitor = {
 	UnaryExpression: (operator, expression) => {
 		return unaryOp(operator, evaluate(expression))
 	},
+	GetExpression: (object, ident) => {
+		const obj = evaluate(object)
+		if (!(ident.lexeme in obj)) {
+			throw Error(`Object does not have property '${ident.lexeme}'.`)
+		}
+
+		return obj[ident.lexeme]
+	},
 	CallExpression: (callee, args) => {
 		let func = evaluate(callee)
 		return func.call(
@@ -171,7 +179,7 @@ const evalVisitor = {
 	ObjectLiteral: (pairs) => {
 		let result = {}
 		pairs.forEach((pair) => {
-			result[pair[0]] = pair[1]
+			result[pair[0].lexeme] = evaluate(pair[1])
 		})
 		return result
 	},
