@@ -1,3 +1,4 @@
+const { walk } = require('./walk')
 const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
 const { Environment } = require('./environment')
@@ -33,16 +34,6 @@ function unaryOp(operator, expr) {
 			return -expr
 		case '!':
 			return !expr
-	}
-}
-
-function walk(ast, visitor) {
-	if (Array.isArray(ast)) {
-		ast.forEach((node) => {
-			visitor[node.type](...Object.values(node))
-		})
-	} else {
-		return visitor[ast.type](...Object.values(ast))
 	}
 }
 
@@ -147,6 +138,24 @@ const evalVisitor = {
 			args.map((arg) => evaluate(arg)),
 			func.closure
 		)
+	},
+	FunctionExpression: (parameters, body) => {
+		const func = {
+			closure: new Environment(env).clone(),
+			call: (args, closure) => {
+				globalReturnValue = null
+
+				args.forEach((arg, i) => {
+					closure.define(parameters[i].lexeme, arg, true)
+				})
+
+				evaluateBlock(body, closure)
+				return globalReturnValue
+			},
+			arity: () => parameters.length,
+			toString: () => `<fn ${ident.lexeme}>`,
+		}
+		return func
 	},
 	VariableExpression: (ident) => {
 		return env.get(ident.lexeme).value

@@ -64,8 +64,12 @@ class Parser {
 		return this.statement()
 	}
 
-	func() {
-		const name = this.consume('IDENTIFIER', 'Expect function name.')
+	func(isExpression = false) {
+		let name = null
+
+		if (!isExpression) {
+			name = this.consume('IDENTIFIER', 'Expect function name.')
+		}
 
 		this.consume('LEFT_PAREN', "Expect '(' after function name.")
 		const parameters = []
@@ -81,7 +85,19 @@ class Parser {
 		this.consume('LEFT_BRACE', "Expect '{' before function body.")
 		const body = this.block()
 
-		return { ident: name, parameters, body, type: 'FunctionDeclaration' }
+		if (isExpression) {
+			return {
+				parameters,
+				body,
+				type: 'FunctionExpression',
+			}
+		} else
+			return {
+				ident: name,
+				parameters,
+				body,
+				type: 'FunctionDeclaration',
+			}
 	}
 
 	varDeclaration() {
@@ -354,6 +370,7 @@ class Parser {
 	}
 
 	primary() {
+		// array literals
 		if (this.match('LEFT_BRACKET')) {
 			let values = []
 			if (!this.check('RIGHT_BRACKET')) {
@@ -366,6 +383,7 @@ class Parser {
 			return { values, type: 'ArrayLiteral' }
 		}
 
+		// object literals
 		if (this.match('LEFT_BRACE')) {
 			let pairs = []
 			if (!this.check('RIGHT_BRACE')) {
@@ -395,6 +413,11 @@ class Parser {
 			this.consume('RIGHT_BRACE', "Expect '}' after object literal.")
 
 			return { pairs, type: 'ObjectLiteral' }
+		}
+
+		// function literals
+		if (this.match('FN')) {
+			return this.func(true)
 		}
 
 		if (this.match('FALSE')) return { value: false, type: 'Literal' }

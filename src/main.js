@@ -29,4 +29,12 @@ let constTest = `
 		print immutable
 `
 
-interpret(closureTest)
+let fnExpressionTest = `
+		sum := fn (a, b) {
+			return a + b
+		}
+
+		print sum(34, 54)
+`
+
+interpret(fnExpressionTest)
