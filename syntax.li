@@ -1,0 +1,231 @@
+// single line comments
+
+/*
+    multi
+    line
+    comments
+*/
+
+
+/*
+    *-----------------*
+    |    variables    |
+    *-----------------*
+*/
+
+// constant declaration
+unchangable := 34
+
+// variable declaration
+let changable = 34
+changable = 45
+
+// `let` variables can also be declared without a definition
+let foo
+print(foo) // nil
+
+
+/*
+    *-----------------*
+    |    functions    |
+    *-----------------*
+*/
+
+fn sayHello(name) {
+    print("Hello ${name}") // interpolation!
+}
+
+// functions that return a single expression can use `=>` instead of `{}` as a short-form definition
+fn step(n) => n + 1
+
+// functions can also be declared by assigning a function expression to a variable
+sum := fn (a, b) {
+    return a + b
+}
+
+/*
+    by default functions declared using `fn` are constant. mutable
+    functions can be declares using `let`, but the use of mutable
+    functions is not reccommended
+*/
+let doesSomething = fn (x) => x + 1
+print(doesSomething(2)) // 3
+doesSomething = fn (x) => x - 1
+print(doesSomething(2)) // 1
+
+
+/*
+    *---------------------------*
+    |    rest operator (...)    |
+    *---------------------------*
+
+    the rest operator is really a syntactic trick. aside
+    from capturin variadic parameters, all other uses of
+    it basically take a list & syntactically remove the
+    surrounding brackets. currently the operator does not
+    work on objects the way JavaScript's does.
+*/
+
+// use to create variadic functions (i.e. functions that take an unkown number of arguments)
+fn printAll(...args) {
+    // args is a `list` of values
+    for arg in args {
+        print(arg)
+    }
+}
+
+// you can individually capture arguments before the rest operator
+fn printAllButTheFirst(first, ...others) {
+    print("not gonna print the first one")
+
+    // use the rest operator on a list to convert it to an argument list
+    printAll(...others)
+}
+
+// use to combine lists
+letters := ["a", "b", "c"]
+numbers := [1, 2, 3]
+mix := [...letters, ...numbers]
+
+printAll(mix)
+/*
+    prints:
+        a
+        b
+        c
+        1
+        2
+        3
+*/
+
+
+/*
+    *-------------------*
+    |    type system    |
+    *-------------------*
+*/
+
+let val = nil // nil
+val = true // boolean
+val = 42 // number
+val = "foo" // string
+val = [1, 2, 3] // list
+val = {"1": 1, "2": 2} // object
+val = fn (a) => a // function
+
+// you can get the type of a value using the typeof operator
+print(typeof val) // function
+
+
+/*
+    *--------------------------*
+    |    control-flow stuff    |
+    *--------------------------*
+*/
+
+// if statements
+if x > 24 {
+    print("beeg")
+} else if x > 22 {
+    print("almost beeg")
+} else {
+    print("smol")
+}
+
+// if expressions (similar to Python's if expressions or ternary operator in other langs)
+x := 42 if y > 34 else 45
+
+// for loops (for iterating through collections)
+for i in 0..10 {
+    print(i)
+}
+
+for el in arr {
+    print(el)
+}
+
+// while loops for other things
+while something.exists() {
+    print(something)
+    something.modify()
+}
+
+// switch-case / pattern-matching
+let statusCode = 200
+
+/*
+    `match` expects a function for each case, the return value of
+    the function is the return value of the entire match expression
+*/
+let response = match statusCode {
+    200: "all good!"
+    404: "i don't have that thing. sorz"
+    500: {
+        print("damn what did you even do?")
+        return "uhhh, problem on our end. give us a few seconds"
+    }
+    _: {
+        print("got unkown code: ${statusCode}")
+        return "unkown status code"
+    }
+}
+
+/*
+    *-------------------*
+    |    collections    |
+    *-------------------*
+*/
+
+let arr = [1, 3, "hello", 42]
+let obj = {
+    "name": "John Doe",
+    "age": 42
+}
+
+// collections are equivalent by value (not reference)
+print([1, 4, 2] == [1, 4, 2]) // true
+
+// constant collections are immutable
+a := [1, 2, 3]
+p := {
+    "x": 0,
+    "y": 10
+}
+
+a[1] = 12 // compile-time error
+p.x = 34 // compile-time error
+a.append(45) // compile-time error
+
+/*
+    unlike collections functions are equivalent by reference.
+    meaning two functions will never be equal to each other
+*/
+fn sum2(a, b) {
+    return a + b
+}
+
+print(sum == sum2) // false
+
+
+/*
+    *---------------------*
+    |    module system    |
+    *---------------------*
+*/
+
+/* math.li */
+export fn add(a, b) {
+    return a +b
+}
+
+/* lib/foo.li */
+export fn something(s) {
+    print("s is '${s}'!")
+}
+
+/* main.li */
+math := import("math.li")
+foo := import("lib/foo.li")
+
+print(math.add(1, 3)) // 4
+foo.something("g") // s is 'g'!
