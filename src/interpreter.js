@@ -89,10 +89,7 @@ const evalVisitor = {
 	},
 	ConstantDeclaration: (ident, initializer) => {
 		const name = ident.lexeme
-		let value = null
-		if (initializer !== null) {
-			value = evaluate(initializer)
-		}
+		const value = evaluate(initializer)
 		env.define(name, value, false)
 	},
 
@@ -183,6 +180,7 @@ function evaluate(node) {
 function interpret(source) {
 	let lexer = new Lexer(source)
 	const tokens = lexer.scanTokens()
+	// console.log(tokens)
 
 	let parser = new Parser(tokens)
 	const ast = parser.parse()

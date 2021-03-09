@@ -13,6 +13,10 @@ class Parser {
 		return this.tokens[this.current]
 	}
 
+	peekNext() {
+		return this.tokens[this.current + 1]
+	}
+
 	isAtEnd() {
 		return this.peek().type === 'EOF'
 	}
@@ -50,6 +54,13 @@ class Parser {
 	declaration() {
 		if (this.match('FN')) return this.func('function')
 		if (this.match('LET')) return this.varDeclaration()
+		if (
+			this.check('IDENTIFIER') &&
+			this.peekNext().type === 'COLON_EQUAL'
+		) {
+			return this.constDeclaration()
+		}
+
 		return this.statement()
 	}
 
@@ -93,6 +104,18 @@ class Parser {
 			ident: name,
 			initializer,
 			type: 'VariableDeclaration',
+		}
+	}
+
+	constDeclaration() {
+		const name = this.consume('IDENTIFIER', 'Expect variable name.')
+		this.consume('COLON_EQUAL')
+		let initializer = this.expression()
+
+		return {
+			ident: name,
+			initializer,
+			type: 'ConstantDeclaration',
 		}
 	}
 

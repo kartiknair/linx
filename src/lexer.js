@@ -160,7 +160,7 @@ class Lexer {
 
 		switch (c) {
 			case ':':
-				this.addToken('COLON')
+				this.addToken(this.match('=') ? 'COLON_EQUAL' : 'COLON')
 				break
 			case '(':
 				this.addToken('LEFT_PAREN')

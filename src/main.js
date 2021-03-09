@@ -1,6 +1,6 @@
 const { interpret } = require('./interpreter')
 
-let test = `
+let closureTest = `
 		fn createCounter(initial) {
 			let n = initial
 			
@@ -21,4 +21,12 @@ let test = `
 		print cc()
     `
 
-interpret(test)
+let constTest = `
+		immutable := 42
+		print immutable
+
+		immutable = 34 // error
+		print immutable
+`
+
+interpret(constTest)
