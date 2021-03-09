@@ -29,4 +29,4 @@ let constTest = `
 		print immutable
 `
 
-interpret(constTest)
+interpret(closureTest)

@@ -52,7 +52,7 @@ class Parser {
 	}
 
 	declaration() {
-		if (this.match('FN')) return this.func('function')
+		if (this.match('FN')) return this.func()
 		if (this.match('LET')) return this.varDeclaration()
 		if (
 			this.check('IDENTIFIER') &&
@@ -64,20 +64,13 @@ class Parser {
 		return this.statement()
 	}
 
-	func(kind) {
-		const name = this.consume('IDENTIFIER', `Expect ${kind} name.`)
+	func() {
+		const name = this.consume('IDENTIFIER', 'Expect function name.')
 
-		this.consume('LEFT_PAREN', `Expect '(' after ${kind} name.`)
+		this.consume('LEFT_PAREN', "Expect '(' after function name.")
 		const parameters = []
 		if (!this.check('RIGHT_PAREN')) {
 			do {
-				if (parameters.length >= 255) {
-					this.error(
-						this.peek(),
-						"Can't have more than 255 parameters."
-					)
-				}
-
 				parameters.push(
 					this.consume('IDENTIFIER', 'Expect parameter name.')
 				)
@@ -85,7 +78,7 @@ class Parser {
 		}
 		this.consume('RIGHT_PAREN', "Expect ')' after parameters.")
 
-		this.consume('LEFT_BRACE', `Expect '{' before ${kind} body.`)
+		this.consume('LEFT_BRACE', "Expect '{' before function body.")
 		const body = this.block()
 
 		return { ident: name, parameters, body, type: 'FunctionDeclaration' }
