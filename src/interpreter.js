@@ -166,7 +166,7 @@ const evalVisitor = {
 		return func
 	},
 	VariableExpression: (ident) => {
-		return env.get(ident.lexeme).value
+		return env.get(ident.lexeme).value.value
 	},
 	GroupExpression: (expression) => {
 		return evaluate(expression)

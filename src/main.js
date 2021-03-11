@@ -1,4 +1,20 @@
+const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
+
+let simple = `
+	let x = 12
+	let y = 24.34
+
+	print x + y
+`
+
+let simpleFunc = `
+	fn sayHello(name) {
+		print "hello there \${name}!"
+	}
+
+	sayHello("john")
+`
 
 let closureTest = `
 		fn createCounter(initial) {
@@ -51,4 +67,32 @@ let fieldAccessTest = `
 		print p.greeting()
 `
 
-interpret(fieldAccessTest)
+let captures = `
+	let x = 3
+
+	fn inc() {
+		x = x + 1
+	}
+
+	print x
+	
+	inc()
+	print x
+`
+
+let changingClosures = `
+	let a = "global"
+	
+	{
+		fn showA() {
+			print a
+		}
+		
+		showA()
+		a = "block"
+		showA()
+	}
+`
+
+interpret(changingClosures)
+console.log(compile(changingClosures))

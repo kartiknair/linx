@@ -1,10 +1,16 @@
 function walk(ast, visitor) {
+	const walkNode = (node) => {
+		if (node.type in visitor) {
+			return visitor[node.type](...Object.values(node))
+		} else {
+			return node
+		}
+	}
+
 	if (Array.isArray(ast)) {
-		ast.forEach((node) => {
-			visitor[node.type](...Object.values(node))
-		})
+		return ast.map(walkNode)
 	} else {
-		return visitor[ast.type](...Object.values(ast))
+		return walkNode(ast)
 	}
 }
 

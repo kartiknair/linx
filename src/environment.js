@@ -2,6 +2,7 @@ class Environment {
 	constructor(enclosing) {
 		this.enclosing = enclosing ? enclosing : null
 		this.values = {}
+		this.steps = 0
 	}
 
 	define(name, value, mutable = true) {
@@ -26,10 +27,17 @@ class Environment {
 
 	get(name) {
 		if (name in this.values) {
-			return this.values[name]
+			this.resetSteps()
+			return { value: this.values[name], steps: this.steps }
 		}
 
-		if (this.enclosing !== null) return this.enclosing.get(name)
+		if (this.enclosing !== null) {
+			this.steps++
+			let enclosingGet = this.enclosing.get(name)
+			let steps = this.steps + enclosingGet.steps
+			this.resetSteps()
+			return { value: enclosingGet.value, steps }
+		}
 
 		throw new Error(`Undefined variable '${name}'.`)
 	}
@@ -40,6 +48,13 @@ class Environment {
 		result.enclosing =
 			this.enclosing === null ? null : this.enclosing.clone()
 		return result
+	}
+
+	resetSteps() {
+		this.steps = 0
+		if (this.enclosing !== null) {
+			this.enclosing.resetSteps()
+		}
 	}
 }
 

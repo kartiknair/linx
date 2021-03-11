@@ -56,6 +56,15 @@ typedef struct {
     List* values;
 } Object;
 
+// functions
+typedef Value* (*fnptr)(Value**, Value**);
+
+typedef struct {
+    fnptr call;
+    Value** environment;
+    size_t environment_length;
+} Function;
+
 void Value__copy(Value** lhs, Value* rhs) {
     free(*lhs);
 
@@ -82,6 +91,18 @@ void Value__copy(Value** lhs, Value* rhs) {
             *(char**)(*lhs)->raw = malloc(strlen(*(char**)rhs->raw) + 1);
             strcpy(*(char**)(*lhs)->raw, *(char**)rhs->raw);
             break;
+        }
+        case TYPE_FUNCTION: {
+            (*lhs)->raw = malloc(sizeof(Function));
+            ((Function*)(*lhs)->raw)->call = ((Function*)rhs->raw)->call;
+            ((Function*)(*lhs)->raw)->environment = malloc(
+                sizeof(Value*) * ((Function*)rhs->raw)->environment_length);
+
+            for (size_t i = 0; i < ((Function*)rhs->raw)->environment_length;
+                 i++) {
+                ((Function*)(*lhs)->raw)->environment[i] =
+                    ((Function*)rhs->raw)->environment[i];
+            }
         }
     }
 }
@@ -120,6 +141,10 @@ bool Value__equals(Value* lhs, Value* rhs) {
             // TODO: check for deep equality
             return false;
         }
+        case TYPE_FUNCTION: {
+            // functions are only equal if they reference the same object
+            return (Function*)lhs->raw == (Function*)rhs->raw;
+        }
     }
 }
 
@@ -148,19 +173,6 @@ void List__append(List* list, Value* value) {
     list->length++;
     Value__copy(&list->arr[list->length - 1], value);
 }
-
-// functions
-
-// the main thing is that functions need to keep an environment
-// environment has to by reference, args are by value (in linx at least)
-
-typedef Value* (*fnptr)(Value**, Value**);
-
-typedef struct {
-    fnptr call;
-    Value** environment;
-    size_t environment_length;
-} Function;
 
 Value* Function__call(Function* fn, Value** arguments) {
     return fn->call(fn->environment, arguments);
@@ -281,6 +293,19 @@ void Object__set(Object* object, Value* key, Value* value) {
         // otherwise update the key
         Value__copy(&existing, value);
     }
+}
+
+Value* Value__create_object_from_arrs(Value** keys, Value** values,
+                                      size_t size) {
+    Value* result = malloc(sizeof(Value));
+    result->type = TYPE_OBJECT;
+    result->raw = Object__create();
+
+    for (size_t i = 0; i < size; i++) {
+        Object__set((Object*)result->raw, keys[i], values[i]);
+    }
+
+    return result;
 }
 
 char* Value__to_charptr(Value* value) {
@@ -409,56 +434,4 @@ Value* linx__operator_call(Value* func, Value** args) {
     }
 
     return Value__create_nil();
-}
-
-/*
-
-hand-written output for the following linx:
-
-        fn createCounter(initial) {
-                let n = initial
-                fn counter() {
-                        n = n + 1
-                        return n
-                }
-                return counter
-        }
-
-        let c1 = createCounter()
-        let c2 = createCounter()
-        print(c1())
-        print(c1())
-        print(c2())
-        print(c1())
-
-*/
-
-// nested function is lifted to the top level by the compiler
-Value* counter_def(Value** environment, Value** arguments) {
-    linx__operator_assign(
-        environment[0],
-        linx__operator_add(environment[0], Value__from_double(1)));
-    return environment[0];
-}
-
-Value* createCounter_def(Value** environment, Value** arguments) {
-    Value* n = arguments[0];
-    Value* counter = Value__create_fn(&counter_def, (Value**){&n}, 1);
-    return counter;
-}
-
-int main(void) {
-    Value* createCounter = Value__create_fn(&createCounter_def, NULL, 0);
-
-    Value* c1 =
-        linx__operator_call(createCounter, (Value*[]){Value__from_double(12)});
-    Value* c2 =
-        linx__operator_call(createCounter, (Value*[]){Value__from_double(34)});
-
-    print(linx__operator_call(c1, NULL));
-    print(linx__operator_call(c1, NULL));
-    print(linx__operator_call(c2, NULL));
-    print(linx__operator_call(c2, NULL));
-
-    return 0;
 }
