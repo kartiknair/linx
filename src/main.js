@@ -1,7 +1,5 @@
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
-const { Lexer } = require('./lexer')
-const { Parser } = require('./parser')
 
 let simple = `
 	let x = 12
@@ -110,8 +108,17 @@ let arraysTest = `
 	print point["x"]
 `
 
-let l = new Lexer(arraysTest)
-let p = new Parser(l.scanTokens())
+let multilineStrings = `
+	let adjective = "cool"
+	let str = 
+		"\${adjective}
+string
+is
+very
+\${adjective}"
 
-interpret(arraysTest)
-console.log(compile(arraysTest))
+	print str
+`
+
+interpret(multilineStrings)
+console.log(compile(multilineStrings))

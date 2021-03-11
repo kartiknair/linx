@@ -149,7 +149,7 @@ const codegenVisitor = {
 	},
 	Literal: (value) => {
 		if (typeof value === 'string') {
-			return `Value__from_charptr("${value}")`
+			return `Value__from_charptr("${value.split('\n').join('\\n')}")`
 		} else if (typeof value === 'number') {
 			return `Value__from_double(${value})`
 		}
