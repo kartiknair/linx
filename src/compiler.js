@@ -56,7 +56,11 @@ const codegenVisitor = {
 		}, ${func.captures.length});`
 	},
 	VariableDeclaration: (ident, initializer) => {
-		return `Value* ${ident.lexeme} = ${codegen(initializer)};`
+		return `Value* ${
+			ident.lexeme
+		} = Value__create_nil; linx__operator_assign(${ident.lexeme}, ${codegen(
+			initializer
+		)});`
 	},
 	ConstantDeclaration: (ident, initializer) => {
 		/*
@@ -66,7 +70,11 @@ const codegenVisitor = {
 			it might be possible to just represent it as a mutable data-type
 			enforcing immutability at compile-time instead.
 		*/
-		return `Value* ${ident.lexeme} = ${codegen(initializer)};`
+		return `Value* ${
+			ident.lexeme
+		} = Value__create_nil(); linx__operator_assign(${
+			ident.lexeme
+		}, ${codegen(initializer)});`
 	},
 
 	// stmts
@@ -93,8 +101,8 @@ const codegenVisitor = {
 	},
 
 	// exprs
-	AssignmentExpression: (ident, value) => {
-		return `linx__operator_assign(${ident.lexeme}, ${codegen(value)})`
+	AssignmentExpression: (expr, value) => {
+		return `linx__operator_assign(${codegen(expr)}, ${codegen(value)})`
 	},
 	BinaryExpression: (left, operator, right) => {
 		return binaryOp(left, operator, right)

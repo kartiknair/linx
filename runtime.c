@@ -145,6 +145,12 @@ void Value__copy(Value** lhs, Value* rhs) {
     }
 }
 
+Value* Value__from_value(Value* value) {
+    Value* result = Value__create_nil();
+    Value__copy(&result, value);
+    return result;
+}
+
 bool Value__equals(Value* lhs, Value* rhs) {
     if (lhs->type != rhs->type) return false;
 

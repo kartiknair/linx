@@ -1,5 +1,7 @@
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
+const { Lexer } = require('./lexer')
+const { Parser } = require('./parser')
 
 let simple = `
 	let x = 12
@@ -120,5 +122,24 @@ very
 	print str
 `
 
-interpret(multilineStrings)
-console.log(compile(multilineStrings))
+let valuesOnAssignment = `
+	p := {
+		x: 12,
+		y: 34
+	}
+	l := [1, 2, 3]
+
+	pCopy := p
+	lCopy := l
+
+	p.x = 45
+	print p
+	print pCopy
+
+	l[0] = 5
+	print l
+	print lCopy
+`
+
+interpret(valuesOnAssignment)
+console.log(compile(valuesOnAssignment))

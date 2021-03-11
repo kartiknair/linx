@@ -222,10 +222,13 @@ class Parser {
 			const equals = this.previous()
 			const value = this.assignment()
 
-			if (expr.type === 'VariableExpression') {
-				const name = expr.ident
+			if (
+				expr.type === 'VariableExpression' ||
+				expr.type === 'GetExpression' ||
+				expr.type === 'IndexExpression'
+			) {
 				return {
-					ident: name,
+					target: expr,
 					value,
 					type: 'AssignmentExpression',
 				}

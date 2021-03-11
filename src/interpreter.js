@@ -76,11 +76,23 @@ const evalVisitor = {
 		if (initializer !== null) {
 			value = evaluate(initializer)
 		}
+
+		if (typeof value === 'object') {
+			console.log('trying to clone obj')
+			value = Object.assign({}, value)
+		}
+
 		env.define(name, value, true)
 	},
 	ConstantDeclaration: (ident, initializer) => {
 		const name = ident.lexeme
-		const value = evaluate(initializer)
+		let value = evaluate(initializer)
+
+		if (typeof value === 'object') {
+			if (Array.isArray(value)) value = Array.from(value)
+			else value = Object.assign({}, value)
+		}
+
 		env.define(name, value, false)
 	},
 
@@ -122,8 +134,12 @@ const evalVisitor = {
 	},
 
 	// exprs
-	AssignmentExpression: (ident, value) => {
-		env.assign(ident.lexeme, evaluate(value))
+	AssignmentExpression: (expr, value) => {
+		if (expr.type === 'GetExpression') {
+			evaluate(expr.object)[expr.ident.lexeme] = evaluate(value)
+		} else if (expr.type === 'IndexExpression') {
+			evaluate(expr.array)[expr.index.value] = evaluate(value)
+		} else env.assign(expr.ident.lexeme, evaluate(value))
 		return value
 	},
 	BinaryExpression: (left, operator, right) => {
