@@ -1,0 +1,54 @@
+// thinking about how exceptions are handled in languages
+// we'll be taking the example of a `readFile` function
+
+// regular 'ol try-catch
+try {
+    content := readFile("nope.txt")
+} catch e {
+    print("readFile failed: ${e.message}")
+    exit(1)
+}
+
+// multiple return values (go's way)
+content, err := readFile("nope.txt")
+
+if err != nil {
+    print("readFile failed: ${e.message}")
+    exit(1)
+}
+
+/*
+    some weird way that i'm thinking of:
+
+    requires two builtin functions: `panic()` & `panicked()`.
+    panic's default behaviour is to print the provided object & exit with a `1` error code.
+    unless you call `panicked` on the function, in which case you get to override that behaviour.
+    the object you called `panic` with is assigned to the function's error property
+*/
+
+fn readFile(path) {
+    if !fs.exists(path) {
+        panic({
+            message: "File (${path}) does not exist."
+        })
+    }
+}
+
+content := readFile("nope.txt")
+
+if panicked(readFile) {
+    print("readFile failed: ${readFile.error.message}")
+    exit(1)
+}
+
+// maybe a `.catch()` fn on every function?
+content := readFile("nope.txt").handle(fn (error) {
+    print("readFile failed: ${error.message}")
+    exit(1)
+})
+
+// `onError` callback on functions?
+content := readFile("nope.txt", fn (error) {
+    print("readFile failed: ${error.message}")
+    exit(1)
+})
