@@ -14,10 +14,10 @@ void string_concat(char** old, const char* to_add) {
     strcat(*old, to_add);
 }
 
-char* double_to_char_buf(double num) {
-    int length = snprintf(NULL, 0, "%f", num);
+char* double_to_charptr(double num) {
+    int length = snprintf(NULL, 0, "%g", num);
     char* str = malloc(length + 1);
-    snprintf(str, length + 1, "%f", num);
+    snprintf(str, length + 1, "%g", num);
     return str;
 }
 
@@ -35,13 +35,6 @@ typedef struct {
     Type type;
     void* raw;
 } Value;
-
-/*
-    how do you represent complex values?
-    specifically lists, objects, & first-class functions.
-
-    trying to implement in this order, since it'll be simplest.
-*/
 
 // list
 typedef struct {
@@ -87,9 +80,52 @@ void Value__copy(Value** lhs, Value* rhs) {
             break;
         }
         case TYPE_STRING: {
-            (*lhs)->raw = malloc(sizeof(char**));
+            (*lhs)->raw = malloc(sizeof(char*));
             *(char**)(*lhs)->raw = malloc(strlen(*(char**)rhs->raw) + 1);
             strcpy(*(char**)(*lhs)->raw, *(char**)rhs->raw);
+            break;
+        }
+        case TYPE_LIST: {
+            (*lhs)->raw = malloc(sizeof(List));
+            ((List*)(*lhs)->raw)->capacity = ((List*)rhs->raw)->capacity;
+            ((List*)(*lhs)->raw)->length = ((List*)rhs->raw)->length;
+
+            ((List*)(*lhs)->raw)->arr =
+                malloc(sizeof(Value*) * ((List*)rhs->raw)->length);
+
+            for (size_t i = 0; i < ((List*)rhs->raw)->length; i++) {
+                Value__copy(&((List*)(*lhs)->raw)->arr[i],
+                            ((List*)rhs->raw)->arr[i]);
+            }
+
+            break;
+        }
+        case TYPE_OBJECT: {
+            (*lhs)->raw = malloc(sizeof(Object));
+            ((Object*)(*lhs)->raw)->keys = malloc(sizeof(List));
+            ((Object*)(*lhs)->raw)->values = malloc(sizeof(List));
+
+            ((Object*)(*lhs)->raw)->keys->capacity =
+                ((Object*)rhs->raw)->keys->capacity;
+            ((Object*)(*lhs)->raw)->values->capacity =
+                ((Object*)rhs->raw)->values->capacity;
+            ((Object*)(*lhs)->raw)->keys->length =
+                ((Object*)rhs->raw)->keys->length;
+            ((Object*)(*lhs)->raw)->values->length =
+                ((Object*)rhs->raw)->values->length;
+
+            ((Object*)(*lhs)->raw)->keys->arr =
+                malloc(sizeof(Value*) * ((Object*)(*lhs)->raw)->keys->length);
+            ((Object*)(*lhs)->raw)->values->arr =
+                malloc(sizeof(Value*) * ((Object*)(*lhs)->raw)->values->length);
+
+            for (size_t i = 0; i < ((Object*)rhs->raw)->keys->length; i++) {
+                Value__copy(&((Object*)(*lhs)->raw)->keys->arr[i],
+                            ((Object*)rhs->raw)->keys->arr[i]);
+                Value__copy(&((Object*)(*lhs)->raw)->values->arr[i],
+                            ((Object*)rhs->raw)->values->arr[i]);
+            }
+
             break;
         }
         case TYPE_FUNCTION: {
@@ -103,6 +139,8 @@ void Value__copy(Value** lhs, Value* rhs) {
                 ((Function*)(*lhs)->raw)->environment[i] =
                     ((Function*)rhs->raw)->environment[i];
             }
+
+            break;
         }
     }
 }
@@ -208,7 +246,7 @@ Value* Value__from_bool(bool value) {
     result->raw = malloc(sizeof(bool));
     *(bool*)result->raw = value;
     return result;
-};
+}
 
 Value* Value__from_double(double value) {
     Value* result = malloc(sizeof(Value));
@@ -216,7 +254,7 @@ Value* Value__from_double(double value) {
     result->raw = malloc(sizeof(double));
     *(double*)result->raw = value;
     return result;
-};
+}
 
 Value* Value__from_charptr(const char* str) {
     Value* result = malloc(sizeof(Value));
@@ -225,7 +263,7 @@ Value* Value__from_charptr(const char* str) {
     *(char**)result->raw = malloc(strlen(str) + 1);
     strcpy(*(char**)result->raw, str);
     return result;
-};
+}
 
 Value* Value__create_list() {
     Value* result = malloc(sizeof(Value));
@@ -315,7 +353,7 @@ char* Value__to_charptr(Value* value) {
         case TYPE_BOOLEAN:
             return *(bool*)value->raw ? "true" : "false";
         case TYPE_NUMBER:
-            return double_to_char_buf(*(double*)value->raw);
+            return double_to_charptr(*(double*)value->raw);
         case TYPE_STRING:
             return *(char**)value->raw;
         case TYPE_LIST: {
@@ -328,8 +366,43 @@ char* Value__to_charptr(Value* value) {
             string_concat(&result, "]");
             return result;
         }
+        case TYPE_OBJECT: {
+            char* result = "{";
+            List* keys = ((Object*)value->raw)->keys;
+            List* values = ((Object*)value->raw)->values;
+
+            for (size_t i = 0; i < keys->length; i++) {
+                string_concat(&result, Value__to_charptr(keys->arr[i]));
+                string_concat(&result, ": ");
+                string_concat(&result, Value__to_charptr(values->arr[i]));
+                if (i != keys->length - 1) string_concat(&result, ", ");
+            }
+            string_concat(&result, "}");
+
+            return result;
+        }
+        case TYPE_FUNCTION:
+            return "<function>";
+    }
+}
+
+bool Value__to_bool(Value* value) {
+    // this is where we determine whether values are "falsy" or "truthy"
+    switch (value->type) {
+        case TYPE_NIL:
+            return false;
+        case TYPE_BOOLEAN:
+            return *(bool*)value->raw;
+        case TYPE_NUMBER:
+            return *(double*)value->raw != 0;
+        case TYPE_STRING:
+            return strlen(*(char**)value->raw) != 0;
+        case TYPE_LIST:
+            return ((List*)value->raw)->length != 0;
         case TYPE_OBJECT:
-            return "<object>";
+            return ((Object*)value->raw)->keys->length != 0;
+        case TYPE_FUNCTION:
+            return true;  // functions are always truthy
     }
 }
 
@@ -344,49 +417,158 @@ void print(Value* value) { printf("%s\n", Value__to_charptr(value)); }
 /* <-- Logical --> */
 
 // lhs && rhs
-Value* linx__operator_or(Value* lhs, Value* rhs){};
+Value* linx__operator_or(Value* lhs, Value* rhs) {
+    return Value__from_bool(Value__to_bool(lhs) || Value__to_bool(rhs));
+}
 // lhs || rhs
-Value* linx__operator_and(Value* lhs, Value* rhs){};
+Value* linx__operator_and(Value* lhs, Value* rhs) {
+    return Value__from_bool(Value__to_bool(lhs) && Value__to_bool(rhs));
+}
 // !value
-Value* linx__operator_not(Value* value){};
+Value* linx__operator_not(Value* value) {
+    return Value__from_bool(!Value__to_bool(value));
+}
 
 /* <-- Comparisons --> */
 
 // lhs == rhs
 Value* linx__operator_equals(Value* lhs, Value* rhs) {
     return Value__from_bool(Value__equals(lhs, rhs));
-};
+}
 // lhs != rhs
 Value* linx__operator_nequals(Value* lhs, Value* rhs) {
     return Value__from_bool(!Value__equals(lhs, rhs));
-};
+}
 // lhs < rhs
-Value* linx__operator_lesser(Value* lhs, Value* rhs){};
+Value* linx__operator_lesser(Value* lhs, Value* rhs) {
+    bool result = false;
+    /*
+        is `[1, 2, 3] < 45`?
+
+        might revisit this, but for comparisons between values
+        of different types the result is always false
+    */
+    if (lhs->type != rhs->type) return Value__from_bool(result);
+
+    switch (lhs->type) {
+        case TYPE_NIL:
+            result = false;
+            break;
+        case TYPE_BOOLEAN:
+            // false is less than true
+            result = *(bool*)lhs->raw < *(bool*)rhs->raw;
+            break;
+        case TYPE_NUMBER:
+            result = *(double*)lhs->raw < *(double*)rhs->raw;
+            break;
+        case TYPE_STRING:
+            result = *(char**)lhs->raw < *(char**)rhs->raw;
+            break;
+        case TYPE_LIST:
+            result = ((List*)lhs->raw)->length < ((List*)rhs->raw)->length;
+            break;
+        case TYPE_OBJECT:
+            result = ((Object*)lhs->raw)->keys->length <
+                     ((Object*)rhs->raw)->keys->length;
+            break;
+        case TYPE_FUNCTION:
+            result = false;
+            break;
+    }
+
+    return Value__from_bool(result);
+}
 // lhs > rhs
-Value* linx__operator_greater(Value* lhs, Value* rhs){};
+Value* linx__operator_greater(Value* lhs, Value* rhs) {
+    bool result = false;
+    if (lhs->type != rhs->type) return Value__from_bool(result);
+
+    switch (lhs->type) {
+        case TYPE_NIL:
+            return false;
+        case TYPE_BOOLEAN:
+        case TYPE_NUMBER:
+        case TYPE_STRING:
+        case TYPE_LIST:
+        case TYPE_OBJECT:
+            result = !(linx__operator_lesser(lhs, rhs));
+        case TYPE_FUNCTION:
+            return false;
+    }
+
+    return Value__from_bool(result);
+}
 // lhs <= rhs
-Value* linx__operator_lequals(Value* lhs, Value* rhs){};
+Value* linx__operator_lequals(Value* lhs, Value* rhs) {
+    return linx__operator_or(linx__operator_lesser(lhs, rhs),
+                             linx__operator_equals(lhs, rhs));
+}
 // lhs >= rhs
-Value* linx__operator_gequals(Value* lhs, Value* rhs){};
+Value* linx__operator_gequals(Value* lhs, Value* rhs) {
+    return linx__operator_or(linx__operator_greater(lhs, rhs),
+                             linx__operator_equals(lhs, rhs));
+}
 
 /* <-- Arithmetic --> */
 
 // lhs + rhs
 Value* linx__operator_add(Value* lhs, Value* rhs) {
-    if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
+    if (lhs->type == TYPE_STRING || rhs->type == TYPE_STRING) {
+        // implicitly convert to string when dealing with addition to strings
+        Value* result = Value__from_charptr("");
+        string_concat((char**)result->raw, Value__to_charptr(lhs));
+        string_concat((char**)result->raw, Value__to_charptr(rhs));
+        return result;
+    } else if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
         Value* result =
             Value__from_double(*(double*)lhs->raw + *(double*)rhs->raw);
         return result;
+    } else {
+        return Value__create_nil();
     }
 }
 // lhs - rhs
-Value* linx__operator_subtract(Value* lhs, Value* rhs){};
+Value* linx__operator_subtract(Value* lhs, Value* rhs) {
+    if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
+        Value* result =
+            Value__from_double(*(double*)lhs->raw - *(double*)rhs->raw);
+        return result;
+    } else {
+        return Value__create_nil();
+    }
+}
 // lhs * rhs
-Value* linx__operator_multiply(Value* lhs, Value* rhs){};
+Value* linx__operator_multiply(Value* lhs, Value* rhs) {
+    if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
+        Value* result =
+            Value__from_double(*(double*)lhs->raw * *(double*)rhs->raw);
+        return result;
+    } else if (lhs->type == TYPE_STRING && rhs->type == TYPE_NUMBER &&
+               *(double*)rhs->raw > 0) {
+        char* result = "";
+        for (size_t i = 0; i < (size_t)(*(double*)rhs->raw); i++) {
+            string_concat(&result, result);
+        }
+        return Value__from_charptr(result);
+    } else {
+        return Value__create_nil();
+    }
+}
 // lhs / rhs
-Value* linx__operator_divide(Value* lhs, Value* rhs){};
+Value* linx__operator_divide(Value* lhs, Value* rhs) {
+    if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
+        Value* result =
+            Value__from_double(*(double*)lhs->raw / *(double*)rhs->raw);
+        return result;
+    } else {
+        return Value__create_nil();
+    }
+}
 // lhs % rhs
-Value* linx__operator_mod(Value* lhs, Value* rhs){};
+Value* linx__operator_mod(Value* lhs, Value* rhs) {
+    // TODO: implement
+    return Value__create_nil();
+}
 
 /* <-- Other --> */
 
@@ -394,13 +576,13 @@ Value* linx__operator_mod(Value* lhs, Value* rhs){};
 Value* linx__operator_assign(Value* lhs, Value* rhs) {
     Value__copy(&lhs, rhs);
     return lhs;
-};
+}
 
 // obj.key
 Value* linx__operator_dot(Value* obj, Value* key) {
     if (obj->type != TYPE_OBJECT) return Value__create_nil();
     return Object__get((Object*)obj->raw, key);
-};
+}
 
 // arr[idx]
 Value* linx__operator_subscript(Value* arr, Value* idx) {
@@ -425,7 +607,7 @@ Value* linx__operator_subscript(Value* arr, Value* idx) {
 
         return ((List*)arr->raw)->arr[(int)(*(double*)idx->raw)];
     }
-};
+}
 
 /* func(...args) */
 Value* linx__operator_call(Value* func, Value** args) {
