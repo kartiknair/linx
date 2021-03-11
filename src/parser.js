@@ -358,6 +358,21 @@ class Parser {
 					ident: name,
 					type: 'GetExpression',
 				}
+			} else if (this.match('LEFT_BRACKET')) {
+				let index = this.consume(
+					'NUMBER',
+					'Expect number in subscript operator.'
+				)
+				this.consume(
+					'RIGHT_BRACKET',
+					'Expect right bracket after index in subscript operator.'
+				)
+				let array = expr
+				expr = {
+					array,
+					index,
+					type: 'IndexExpression',
+				}
 			} else break
 		}
 
@@ -373,8 +388,7 @@ class Parser {
 			} while (this.match('COMMA'))
 		}
 
-		// TODO: why is this here?
-		const paren = this.consume('RIGHT_PAREN', "Expect ')' after arguments.")
+		this.consume('RIGHT_PAREN', "Expect ')' after arguments.")
 
 		return { callee, args, type: 'CallExpression' }
 	}

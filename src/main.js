@@ -1,5 +1,7 @@
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
+const { Lexer } = require('./lexer')
+const { Parser } = require('./parser')
 
 let simple = `
 	let x = 12
@@ -94,5 +96,15 @@ let changingClosures = `
 	}
 `
 
-interpret(changingClosures)
-console.log(compile(changingClosures))
+let arraysTest = `
+	let l = [1, 2, 3]
+	
+	print l
+	print l[0]
+`
+
+let l = new Lexer(arraysTest)
+let p = new Parser(l.scanTokens())
+
+interpret(arraysTest)
+console.log(compile(arraysTest))

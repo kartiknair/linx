@@ -140,6 +140,11 @@ const evalVisitor = {
 
 		return obj[ident.lexeme]
 	},
+	IndexExpression: (array, index) => {
+		if (Array.isArray(evaluate(array))) {
+			return evaluate(array)[index.lexeme]
+		} else return null
+	},
 	CallExpression: (callee, args) => {
 		let func = evaluate(callee)
 		return func.call(
