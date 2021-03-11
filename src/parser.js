@@ -359,10 +359,7 @@ class Parser {
 					type: 'GetExpression',
 				}
 			} else if (this.match('LEFT_BRACKET')) {
-				let index = this.consume(
-					'NUMBER',
-					'Expect number in subscript operator.'
-				)
+				let index = this.expression()
 				this.consume(
 					'RIGHT_BRACKET',
 					'Expect right bracket after index in subscript operator.'

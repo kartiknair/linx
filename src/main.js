@@ -97,10 +97,17 @@ let changingClosures = `
 `
 
 let arraysTest = `
+	let point = {
+		x: 12,
+		y: 45
+	}
 	let l = [1, 2, 3]
 	
 	print l
 	print l[0]
+	
+	print point
+	print point["x"]
 `
 
 let l = new Lexer(arraysTest)

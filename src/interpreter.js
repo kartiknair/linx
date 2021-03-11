@@ -141,8 +141,8 @@ const evalVisitor = {
 		return obj[ident.lexeme]
 	},
 	IndexExpression: (array, index) => {
-		if (Array.isArray(evaluate(array))) {
-			return evaluate(array)[index.lexeme]
+		if (Array.isArray(evaluate(array)) || typeof array === 'object') {
+			return evaluate(array)[evaluate(index)]
 		} else return null
 	},
 	CallExpression: (callee, args) => {

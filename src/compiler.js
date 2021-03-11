@@ -103,7 +103,7 @@ const codegenVisitor = {
 		return unaryOp(operator, expression)
 	},
 	IndexExpression: (array, index) => {
-		return `linx__operator_subscript(${codegen(array)}, ${index.lexeme})`
+		return `linx__operator_subscript(${codegen(array)}, ${codegen(index)})`
 	},
 	GetExpression: (object, ident) => {
 		return `linx__operator_dot(${codegen(object)}, Value__from_charptr("${
