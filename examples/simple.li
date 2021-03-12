@@ -1,0 +1,10 @@
+let x = 12
+let y = 24.34
+
+print x + y
+
+immutable := 42
+print immutable
+
+immutable = 34 // error
+print immutable

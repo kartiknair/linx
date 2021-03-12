@@ -145,6 +145,13 @@ void Value__copy(Value** lhs, Value* rhs) {
     }
 }
 
+Value* Value__create_nil() {
+    Value* result = malloc(sizeof(Value));
+    result->type = TYPE_NIL;
+    result->raw = NULL;
+    return result;
+}
+
 Value* Value__from_value(Value* value) {
     Value* result = Value__create_nil();
     Value__copy(&result, value);
@@ -236,13 +243,6 @@ Function* Function__create(fnptr fn, Value** environment,
         result->environment = NULL;
     }
 
-    return result;
-}
-
-Value* Value__create_nil() {
-    Value* result = malloc(sizeof(Value));
-    result->type = TYPE_NIL;
-    result->raw = NULL;
     return result;
 }
 
@@ -695,33 +695,3 @@ Value* toString__builtin_def(Value** environment, Value** arguments) {
 //     printf("%s\n", Value__to_charptr(arguments[0]));
 //     return Value__create_nil();
 // }
-
-int main() {
-    Value* len = Value__create_fn(&len__builtin_def, NULL, 0);
-    Value* type = Value__create_fn(&type__builtin_def, NULL, 0);
-    Value* range = Value__create_fn(&range__builtin_def, NULL, 0);
-    Value* toString = Value__create_fn(&toString__builtin_def, NULL, 0);
-    Value* p = Value__create_nil();
-    linx__operator_assign(
-        p, Value__create_object_from_arrs(
-               (Value*[]){Value__from_charptr("x"), Value__from_charptr("y")},
-               (Value*[]){Value__from_double(12), Value__from_double(34)}, 2));
-    Value* l = Value__create_nil();
-    linx__operator_assign(
-        l, Value__from_array(
-               (Value*[]){Value__from_double(1), Value__from_double(2),
-                          Value__from_double(3)},
-               3));
-    Value* pCopy = Value__create_nil();
-    linx__operator_assign(pCopy, p);
-    Value* lCopy = Value__create_nil();
-    linx__operator_assign(lCopy, l);
-    linx__operator_assign(linx__operator_dot(p, Value__from_charptr("x")),
-                          Value__from_double(45));
-    print(p);
-    print(pCopy);
-    linx__operator_assign(linx__operator_subscript(l, Value__from_double(0)),
-                          Value__from_double(5));
-    print(l);
-    print(lCopy);
-}

@@ -1,0 +1,21 @@
+{
+	"name": "linx",
+	"version": "0.1.0",
+	"description": "",
+	"main": "src/main.js",
+	"directories": {
+		"doc": "doc",
+		"example": "examples"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kartiknair/linx.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/kartiknair/linx/issues"
+	},
+	"homepage": "https://github.com/kartiknair/linx#readme"
+}

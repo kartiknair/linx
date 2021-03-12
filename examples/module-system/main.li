@@ -1,0 +1,2 @@
+math := import "math.li"
+print math.add(1, 3)

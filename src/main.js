@@ -1,187 +1,107 @@
-const { bundle } = require('./bundler')
+const { join } = require('path')
+const { spawn } = require('child_process')
+const { readFileSync, existsSync, writeFileSync, mkdirSync } = require('fs')
+
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
-const { Lexer } = require('./lexer')
-const { Parser } = require('./parser')
 
-let simple = `
-	let x = 12
-	let y = 24.34
+const progName = 'linx'
+const commands = ['run', 'compile', 'emit-c']
+const args = process.argv.slice(2)
 
-	print x + y
-`
+const globalHelpText = `
+  Usage
+    $ ${progName} <command> [options]
 
-let simpleFunc = `
-	fn sayHello(name) {
-		print "hello there \${name}!"
+  Available Commands
+    run        Runs the provided Linx file.
+    compile    Compiles the Linx file to an executable.
+    emit-c     Writes compiled C code to stdout.
+
+  For more info, run any command with the \`--help\` flag
+    $ ${progName} run --help`
+
+const commandHelpTexts = {
+	run: `
+  Description
+    Runs the provided Linx file directly using the treewalk interpreter.
+
+  Usage
+    $ ${progName} run <filename>`,
+	compile: `
+  Description
+    Compiles the provided Linx file to C & then uses the
+    systems C compiler to compile to an executable.
+
+  Usage
+    $ ${progName} compile <filename> [options]
+
+  Options
+    --cc    The program to use instead of $CC to compile the C code.`,
+	'emit-c': ``,
+}
+
+if (!commands.includes(args[0])) {
+	console.log(globalHelpText)
+	process.exit(1)
+} else {
+	if (args.includes('--help') || args.includes('-h')) {
+		console.log(commandHelpTexts[args[0]])
+		process.exit(0)
+	} else if (args.length < 2) {
+		console.log(commandHelpTexts[args[0]])
+		process.exit(1)
 	}
 
-	sayHello("john")
-`
+	let fileName = args[1]
+	if (!existsSync(fileName)) {
+		console.error('File does not exist:', fileName)
+		process.exit(1)
+	}
+	let fileContents = readFileSync(fileName, 'utf-8')
 
-let closureTest = `
-		fn createCounter(initial) {
-			let n = initial
-			
-			fn count() {
-				n = n + 1
-				return n
+	switch (args[0]) {
+		case 'run': {
+			interpret(fileContents)
+			break
+		}
+		case 'compile': {
+			let c = compile(fileContents)
+			let runtime = readFileSync(join(__dirname, '../runtime.c'), 'utf-8')
+			c = runtime + c
+
+			if (!existsSync(join(__dirname, '../tmp'))) {
+				mkdirSync(join(__dirname, '../tmp'))
+			}
+			writeFileSync(join(__dirname, '../tmp/tempcache.c'), c)
+
+			let cc = 'CC'
+			if (args.includes('--cc')) {
+				cc = args[args.indexOf('--cc') + 1]
 			}
 
-			return count
+			const compileCommand = spawn(
+				cc,
+				[join(__dirname, '../tmp/tempcache.c'), '-Wall', '-Wpedantic'],
+				{
+					cwd: process.cwd(),
+					stdio: 'inherit',
+				}
+			)
+
+			compileCommand.on('close', (code) => {
+				if (code === 0) {
+					console.log(
+						'program was compiled to executable successfully'
+					)
+				}
+			})
+
+			break
 		}
-
-		let c = createCounter(3)
-		let cc = createCounter(12)
-
-		print c()
-		print c()
-		print cc()
-		print cc()
-    `
-
-let constTest = `
-		immutable := 42
-		print immutable
-
-		immutable = 34 // error
-		print immutable
-`
-
-let fnExpressionTest = `
-		sum := fn (a, b) {
-			return a + b
+		case 'emit-c': {
+			console.log(compile(fileContents))
+			break
 		}
-
-		print sum(34, 54)
-`
-
-let fieldAccessTest = `
-		p := {
-			name: "john doe",
-			age: 45,
-			greeting: fn () {
-				return "hi there, i'm john doe!"
-			}
-		}
-
-		print p.name
-		print p.age
-		print p.greeting()
-`
-
-let captures = `
-	let x = 3
-
-	fn inc() {
-		x = x + 1
 	}
-
-	print x
-	
-	inc()
-	print x
-`
-
-let changingClosures = `
-	let a = "global"
-	
-	{
-		fn showA() {
-			print a
-		}
-		
-		showA()
-		a = "block"
-		showA()
-	}
-`
-
-let arraysTest = `
-	let point = {
-		x: 12,
-		y: 45
-	}
-	let l = [1, 2, 3]
-	
-	print l
-	print l[0]
-	
-	print point
-	print point["x"]
-`
-
-let multilineStrings = `
-	let adjective = "cool"
-	let str = 
-		"\${adjective}
-string
-is
-very
-\${adjective}"
-
-	print str
-`
-
-let valuesOnAssignment = `
-	p := {
-		x: 12,
-		y: 34
-	}
-	l := [1, 2, 3]
-
-	pCopy := p
-	lCopy := l
-
-	p.x = 45
-	print p
-	print pCopy
-
-	l[0] = 5
-	print l
-	print lCopy
-`
-
-let usingBuiltins = `
-	let l = [1, 4, 3]
-	let sum = fn (a, b) {
-		return a + b
-	}
-
-	print len(l)
-	print type(l)
-	print range(10, 0, 3)
-`
-
-let importOutput = `
-	math := (fn () {
-		fn add(a, b) {
-			return a + b
-		}
-
-		return {
-			add: add
-		}
-	})()
-
-	foo := (fn () {
-		fn something(s) {
-			print("s is '\${s}'!")
-		}
-
-		return {
-			something: something
-		}
-	})()
-
-	print(math.add(1, 3)) // 4
-	foo.something("g") // s is 'g'!
-`
-
-let moduleSystem = `
-	math := import "math.li"
-	print math.add(1, 3)
-`
-
-interpret(moduleSystem)
-console.log(compile(moduleSystem))
+}

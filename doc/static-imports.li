@@ -32,7 +32,7 @@ math := (fn () {
 
 foo := (fn () {
 	fn something(s) {
-		print("s is '\${s}'!")
+		print("s is '${s}'!")
 	}
 
 	return {

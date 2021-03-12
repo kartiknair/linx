@@ -1,0 +1,32 @@
+fn sayHello(name) {
+    print "hello there ${name}!"
+}
+
+sayHello("john")
+
+// closures & first-class functions
+fn createCounter(initial) {
+    let n = initial
+    
+    fn count() {
+        n = n + 1
+        return n
+    }
+
+    return count
+}
+
+let c = createCounter(3)
+let cc = createCounter(12)
+
+print c()
+print c()
+print cc()
+print cc()
+
+// functions as expressions
+sum := fn (a, b) {
+    return a + b
+}
+
+print sum(34, 54)

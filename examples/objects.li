@@ -1,0 +1,23 @@
+p := {
+    name: "john doe",
+    age: 45,
+    greeting: fn () {
+        return "hi there, i'm john doe!"
+    }
+}
+
+print p.name
+print p.age
+print p.greeting()
+
+// obejcts are assigned by value (not reference)
+point := {
+    x: 12,
+    y: 34
+}
+
+pointCopy := point
+
+point.x = 45
+print point
+print pointCopy

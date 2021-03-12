@@ -198,8 +198,6 @@ function compile(source) {
 	const compiledStatements = codegen(ast)
 	let compiledFunctions = ''
 
-	console.log(fnDecls)
-
 	while (fnDecls.length !== 0) {
 		fnDecls.forEach((fn) => {
 			let fnDef = `Value* ${
@@ -220,9 +218,7 @@ function compile(source) {
 		})
 	}
 
-	return `#include "runtime.c"
-		
-        ${compiledFunctions}
+	return `${compiledFunctions}
 		
         int main() {
 			${builtins

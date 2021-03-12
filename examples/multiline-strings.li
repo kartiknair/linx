@@ -1,0 +1,8 @@
+let adjective = "cool"
+let str = "${adjective}
+string
+is
+very
+${adjective}"
+
+print str
