@@ -23,6 +23,7 @@ std library:
 2. `list.slice(list, start, end)` returns a sub-list of a list
 3. `list.contains(list, value)` returns whether or not the value is in the list (`true`/`false`)
 4. `list.iterator(list)` returns an iterator for the provided list. see [iterator](#iterator) for more details
+5. `list.join(list, delimiter)` joins a list into a string with the provided delimiter
 
 ### `object`
 

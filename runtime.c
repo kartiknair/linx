@@ -623,3 +623,97 @@ Value* linx__operator_call(Value* func, Value** args) {
 
     return Value__create_nil();
 }
+
+char* type_to_string(Type t) {
+    switch (t) {
+        case TYPE_NIL:
+            return "nil";
+        case TYPE_BOOLEAN:
+            return "boolean";
+        case TYPE_NUMBER:
+            return "number";
+        case TYPE_STRING:
+            return "string";
+        case TYPE_LIST:
+            return "list";
+        case TYPE_OBJECT:
+            return "object";
+        case TYPE_FUNCTION:
+            return "function";
+    }
+}
+
+Value* len__builtin_def(Value** environment, Value** arguments) {
+    switch (arguments[0]->type) {
+        case TYPE_NIL:
+        case TYPE_BOOLEAN:
+        case TYPE_NUMBER:
+        case TYPE_FUNCTION:
+            return Value__create_nil();
+        case TYPE_STRING:
+            return Value__from_double(strlen(*(char**)arguments[0]->raw));
+        case TYPE_LIST:
+            return Value__from_double(((List*)arguments[0]->raw)->length);
+        case TYPE_OBJECT:
+            return Value__from_double(
+                ((Object*)arguments[0]->raw)->keys->length);
+    }
+}
+
+Value* type__builtin_def(Value** environment, Value** arguments) {
+    return Value__from_charptr(type_to_string(arguments[0]->type));
+}
+
+Value* range__builtin_def(Value** environment, Value** arguments) {
+    Value* start = arguments[0];
+    Value* end = arguments[1];
+    Value* step = arguments[2];
+
+    Value* result = Value__create_list();
+
+    while (linx__operator_nequals(start, end)) {
+        linx__operator_assign(start, linx__operator_add(start, end));
+        List__append((List*)result->raw, start);
+    }
+
+    return result;
+}
+
+Value* toString__builtin_def(Value** environment, Value** arguments) {
+    return Value__from_charptr(Value__to_charptr(arguments[0]));
+}
+
+// Value* print__builtin_def(Value** environment, Value** arguments) {
+//     printf("%s\n", Value__to_charptr(arguments[0]));
+//     return Value__create_nil();
+// }
+
+int main() {
+    Value* len = Value__create_fn(&len__builtin_def, NULL, 0);
+    Value* type = Value__create_fn(&type__builtin_def, NULL, 0);
+    Value* range = Value__create_fn(&range__builtin_def, NULL, 0);
+    Value* toString = Value__create_fn(&toString__builtin_def, NULL, 0);
+    Value* p = Value__create_nil();
+    linx__operator_assign(
+        p, Value__create_object_from_arrs(
+               (Value*[]){Value__from_charptr("x"), Value__from_charptr("y")},
+               (Value*[]){Value__from_double(12), Value__from_double(34)}, 2));
+    Value* l = Value__create_nil();
+    linx__operator_assign(
+        l, Value__from_array(
+               (Value*[]){Value__from_double(1), Value__from_double(2),
+                          Value__from_double(3)},
+               3));
+    Value* pCopy = Value__create_nil();
+    linx__operator_assign(pCopy, p);
+    Value* lCopy = Value__create_nil();
+    linx__operator_assign(lCopy, l);
+    linx__operator_assign(linx__operator_dot(p, Value__from_charptr("x")),
+                          Value__from_double(45));
+    print(p);
+    print(pCopy);
+    linx__operator_assign(linx__operator_subscript(l, Value__from_double(0)),
+                          Value__from_double(5));
+    print(l);
+    print(lCopy);
+}

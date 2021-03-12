@@ -181,6 +181,8 @@ function codegen(node) {
 	return walk(node, codegenVisitor)
 }
 
+const builtins = ['len', 'type', 'range', 'toString']
+
 function compile(source) {
 	let lexer = new Lexer(source)
 	const tokens = lexer.scanTokens()
@@ -217,6 +219,12 @@ function compile(source) {
         ${compiledFunctions}
 		
         int main() {
+			${builtins
+				.map(
+					(fn) =>
+						`Value* ${fn} = Value__create_fn(&${fn}__builtin_def, NULL, 0);`
+				)
+				.join('\n')}
 		    ${compiledStatements.join('\n')}
 		}`
 }

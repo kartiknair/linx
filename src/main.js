@@ -1,7 +1,5 @@
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
-const { Lexer } = require('./lexer')
-const { Parser } = require('./parser')
 
 let simple = `
 	let x = 12

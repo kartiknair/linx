@@ -52,3 +52,13 @@ content := readFile("nope.txt", fn (error) {
     print("readFile failed: ${error.message}")
     exit(1)
 })
+
+
+// swift-like try expressions with postfixes defining actions?
+
+content := try? readFile("nope.txt") // content will be either `nil` or a `string`
+content := try! readFile("nope.txt") // content will be a `string` but program might crash
+content := try readFile("nope.txt") handle error {
+    print("readFile failed: ${error.message}")
+    exit(1)
+}
