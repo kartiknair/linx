@@ -2,6 +2,7 @@ const { walk } = require('./walk')
 const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
 const { analyze } = require('./analyzer')
+const { builtins } = require('./builtins')
 
 function anonymousFnId() {
 	let count = 0
@@ -180,8 +181,6 @@ const codegenVisitor = {
 function codegen(node) {
 	return walk(node, codegenVisitor)
 }
-
-const builtins = ['len', 'type', 'range', 'toString']
 
 function compile(source) {
 	let lexer = new Lexer(source)

@@ -669,11 +669,19 @@ Value* range__builtin_def(Value** environment, Value** arguments) {
     Value* end = arguments[1];
     Value* step = arguments[2];
 
+    if (linx__operator_equals(start, end)) return Value__create_list();
+
+    bool forwards = true;
+    if (linx__operator_greater(start, end)) forwards = false;
+
     Value* result = Value__create_list();
 
-    while (linx__operator_nequals(start, end)) {
-        linx__operator_assign(start, linx__operator_add(start, end));
+    while (forwards ? linx__operator_lesser(start, end)
+                    : linx__operator_greater(start, end)) {
         List__append((List*)result->raw, start);
+        linx__operator_assign(start, forwards
+                                         ? linx__operator_add(start, end)
+                                         : linx__operator_subtract(start, end));
     }
 
     return result;

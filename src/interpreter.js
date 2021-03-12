@@ -2,6 +2,7 @@ const { walk } = require('./walk')
 const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
 const { Environment } = require('./environment')
+const { builtins, fns } = require('./builtins')
 
 function binaryOp(left, operator, right) {
 	switch (operator.lexeme) {
@@ -38,6 +39,10 @@ function unaryOp(operator, expr) {
 }
 
 let env = new Environment()
+
+builtins.forEach((builtin, i) => {
+	env.define(builtin, fns[i], false)
+})
 
 function evaluateBlock({ statements }, localEnvironment) {
 	let prevEnvironment = env
@@ -77,9 +82,9 @@ const evalVisitor = {
 			value = evaluate(initializer)
 		}
 
-		if (typeof value === 'object') {
-			console.log('trying to clone obj')
-			value = Object.assign({}, value)
+		if (typeof value === 'object' && value !== null) {
+			if (Array.isArray(value)) value = Array.from(value)
+			else value = Object.assign({}, value)
 		}
 
 		env.define(name, value, true)
@@ -88,7 +93,7 @@ const evalVisitor = {
 		const name = ident.lexeme
 		let value = evaluate(initializer)
 
-		if (typeof value === 'object') {
+		if (typeof value === 'object' && value !== null) {
 			if (Array.isArray(value)) value = Array.from(value)
 			else value = Object.assign({}, value)
 		}

@@ -1,10 +1,15 @@
 const { walk } = require('./walk')
 const { Environment } = require('./environment')
+const { builtins } = require('./builtins')
 
 let inFunction = false
 let closureCaptures = new Set()
 
 let env = new Environment()
+
+builtins.forEach((builtin) => {
+	env.define(builtin, null, false)
+})
 
 function analyzeBlock({ statements }, localEnvironment) {
 	let prevEnvironment = env

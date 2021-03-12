@@ -139,5 +139,16 @@ let valuesOnAssignment = `
 	print lCopy
 `
 
-interpret(valuesOnAssignment)
-console.log(compile(valuesOnAssignment))
+let usingBuiltins = `
+	let l = [1, 4, 3]
+	let sum = fn (a, b) {
+		return a + b
+	}
+
+	print len(l)
+	print type(l)
+	print range(10, 0, 3)
+`
+
+interpret(usingBuiltins)
+console.log(compile(usingBuiltins))
