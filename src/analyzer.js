@@ -94,6 +94,7 @@ const analyzeVisitor = {
 		}
 	},
 
+	// exprs
 	AssignmentExpression: (ident, value) => {
 		if (
 			inFunction &&
@@ -176,6 +177,9 @@ const analyzeVisitor = {
 			args: args.map(analyze),
 			type: 'CallExpression',
 		}
+	},
+	GroupExpression: (expression) => {
+		return { expression: analyze(expression), type: 'GroupExpression' }
 	},
 
 	// literals

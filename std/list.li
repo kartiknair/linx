@@ -1,0 +1,60 @@
+export fn iterator(list) {
+    if type(list) != "list" {
+        return nil
+    }
+
+    let index = 0
+    valid := fn () {
+        return index < len(list)
+    }
+    next := fn () {
+        index = index + 1
+        return list[index - 1]
+    }
+    return {
+        valid: valid,
+        next: next,
+    }
+}
+
+export fn map(list, callback) {
+    for i in 0..len(list) {
+        list[i] = callback(list[i])
+    }
+}
+
+export fn slice(list, start, end) {
+    if start >= end {
+        return []
+    }
+
+    let newList = []
+    for i in start..end {
+        newList.push(list[i])
+    }
+
+    return newList
+}
+
+export fn contains(list, value) {
+    for el in list {
+        if el == value {
+            return true
+        }
+    }
+
+    return false
+}
+
+export fn join(list, delimiter) {
+    let result = ""
+
+    for i in 0..len(list) {
+        result = result + list[i]
+        if i != len(list) - 1 {
+            result = result + delimiter
+        }
+    }
+
+    return result
+}

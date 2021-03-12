@@ -3,6 +3,7 @@ const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
 const { Environment } = require('./environment')
 const { builtins, fns } = require('./builtins')
+const { bundle } = require('./bundler')
 
 function binaryOp(left, operator, right) {
 	switch (operator.lexeme) {
@@ -226,7 +227,8 @@ function interpret(source) {
 	// console.log(tokens)
 
 	let parser = new Parser(tokens)
-	const ast = parser.parse()
+	let ast = parser.parse()
+	ast = bundle(ast)
 
 	return evaluate(ast)
 }

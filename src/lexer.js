@@ -19,7 +19,6 @@ function isAlphaNumeric(string) {
 
 const keywords = [
 	'and',
-	'class',
 	'else',
 	'false',
 	'for',
@@ -29,12 +28,12 @@ const keywords = [
 	'or',
 	'print',
 	'return',
-	'super',
-	'this',
 	'true',
 	'let',
 	'while',
 	'in',
+	'import',
+	'export',
 ]
 
 class Lexer {

@@ -1,0 +1,49 @@
+// imports are static in linx
+// meaning before interpreting or compiling imports are bundled into the same file
+// this means something like this:
+
+/* math.li */
+export fn add(a, b) {
+    return a +b
+}
+
+/* lib/foo.li */
+export fn something(s) {
+    print("s is '${s}'!")
+}
+
+/* main.li */
+math := import "math.li"
+foo := import "lib/foo.li"
+
+print(math.add(1, 3)) // 4
+foo.something("g") // s is 'g'!
+
+// will lead to a bundled main.li file like this:
+math := (fn () {
+	fn add(a, b) {
+		return a + b
+	}
+
+	return {
+		add: add
+	}
+})()
+
+foo := (fn () {
+	fn something(s) {
+		print("s is '\${s}'!")
+	}
+
+	return {
+		something: something
+	}
+})()
+
+print(math.add(1, 3)) // 4
+foo.something("g") // s is 'g'!
+
+// the system makes use of IIFEs, a concept I've lifted from JS
+// because it works really well here. it gives all the code in
+// the imported module a new scope allowing top-level module
+// code to behave as expected.

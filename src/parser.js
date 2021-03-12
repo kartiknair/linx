@@ -51,6 +51,16 @@ class Parser {
 		return false
 	}
 
+	export() {
+		if (this.match('EXPORT')) {
+			let decl = this.declaration()
+			return {
+				declaration: decl,
+				type: 'ExportDeclaration',
+			}
+		} else return this.declaration()
+	}
+
 	declaration() {
 		if (this.match('FN')) return this.func()
 		if (this.match('LET')) return this.varDeclaration()
@@ -444,6 +454,18 @@ class Parser {
 			return this.func(true)
 		}
 
+		// import expressions
+		if (this.match('IMPORT')) {
+			let path = this.consume(
+				'STRING',
+				'Expect static string for import expression.'
+			)
+			return {
+				path,
+				type: 'ImportExpression',
+			}
+		}
+
 		if (this.match('FALSE')) return { value: false, type: 'Literal' }
 		if (this.match('TRUE')) return { value: true, type: 'Literal' }
 		if (this.match('NIL')) return { value: null, type: 'Literal' }
@@ -478,7 +500,7 @@ class Parser {
 		const statements = []
 
 		while (!this.isAtEnd()) {
-			statements.push(this.declaration())
+			statements.push(this.export())
 		}
 
 		return statements

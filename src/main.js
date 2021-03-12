@@ -1,5 +1,8 @@
+const { bundle } = require('./bundler')
 const { compile } = require('./compiler')
 const { interpret } = require('./interpreter')
+const { Lexer } = require('./lexer')
+const { Parser } = require('./parser')
 
 let simple = `
 	let x = 12
@@ -150,5 +153,35 @@ let usingBuiltins = `
 	print range(10, 0, 3)
 `
 
-interpret(usingBuiltins)
-console.log(compile(usingBuiltins))
+let importOutput = `
+	math := (fn () {
+		fn add(a, b) {
+			return a + b
+		}
+
+		return {
+			add: add
+		}
+	})()
+
+	foo := (fn () {
+		fn something(s) {
+			print("s is '\${s}'!")
+		}
+
+		return {
+			something: something
+		}
+	})()
+
+	print(math.add(1, 3)) // 4
+	foo.something("g") // s is 'g'!
+`
+
+let moduleSystem = `
+	math := import "math.li"
+	print math.add(1, 3)
+`
+
+interpret(moduleSystem)
+console.log(compile(moduleSystem))

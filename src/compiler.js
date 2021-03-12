@@ -3,10 +3,14 @@ const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
 const { analyze } = require('./analyzer')
 const { builtins } = require('./builtins')
+const { bundle } = require('./bundler')
 
 function anonymousFnId() {
-	let count = 0
-	return () => `linx__anonymous_fn$${count}`
+	let count = -1
+	return () => {
+		count++
+		return `linx__anonymous_fn$${count}`
+	}
 }
 
 const getFnId = anonymousFnId()
@@ -59,9 +63,9 @@ const codegenVisitor = {
 	VariableDeclaration: (ident, initializer) => {
 		return `Value* ${
 			ident.lexeme
-		} = Value__create_nil; linx__operator_assign(${ident.lexeme}, ${codegen(
-			initializer
-		)});`
+		} = Value__create_nil(); linx__operator_assign(${
+			ident.lexeme
+		}, ${codegen(initializer)});`
 	},
 	ConstantDeclaration: (ident, initializer) => {
 		/*
@@ -188,15 +192,16 @@ function compile(source) {
 
 	let parser = new Parser(tokens)
 	let ast = parser.parse()
+	ast = bundle(ast)
 	ast = analyze(ast)
 
 	const compiledStatements = codegen(ast)
 	let compiledFunctions = ''
 
+	console.log(fnDecls)
+
 	while (fnDecls.length !== 0) {
 		fnDecls.forEach((fn) => {
-			fnDecls = []
-
 			let fnDef = `Value* ${
 				fn.name
 			}__linx_definition(Value** environment, Value** arguments) {
@@ -210,6 +215,8 @@ function compile(source) {
 				.join('\n')}}`
 
 			compiledFunctions = fnDef + compiledFunctions + '\n'
+
+			fnDecls = fnDecls.slice(1)
 		})
 	}
 
