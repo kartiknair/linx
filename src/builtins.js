@@ -54,7 +54,7 @@ const range = {
 		let result = []
 
 		let i = start
-		while (forwards ? i < end : i > end) {
+		while (forwards ? i <= end : i >= end) {
 			result.push(i)
 			i = forwards ? i + step : i - step
 		}

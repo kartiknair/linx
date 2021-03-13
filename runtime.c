@@ -283,11 +283,14 @@ Value* Value__from_array(Value* arr[], size_t count) {
     result->type = TYPE_LIST;
     result->raw = malloc(sizeof(List));
 
-    List* retlist = (List*)result->raw;
-    retlist->arr = calloc(count, sizeof(Value*));
-    retlist->length = count;
-    retlist->capacity = count;
-    memcpy(retlist->arr, arr, sizeof(Value*) * count);
+    if (count == 0) {
+        result->raw = List__create();
+    } else {
+        ((List*)result->raw)->arr = calloc(count, sizeof(Value*));
+        ((List*)result->raw)->length = count;
+        ((List*)result->raw)->capacity = count;
+        memcpy(((List*)result->raw)->arr, arr, sizeof(Value*) * count);
+    }
 
     return result;
 }
@@ -454,7 +457,7 @@ Value* linx__operator_lesser(Value* lhs, Value* rhs) {
         might revisit this, but for comparisons between values
         of different types the result is always false
     */
-    if (lhs->type != rhs->type) return Value__from_bool(result);
+    if (lhs->type != rhs->type) return Value__from_bool(false);
 
     switch (lhs->type) {
         case TYPE_NIL:
@@ -491,15 +494,18 @@ Value* linx__operator_greater(Value* lhs, Value* rhs) {
 
     switch (lhs->type) {
         case TYPE_NIL:
-            return false;
+            result = false;
+            break;
         case TYPE_BOOLEAN:
         case TYPE_NUMBER:
         case TYPE_STRING:
         case TYPE_LIST:
         case TYPE_OBJECT:
-            result = !(linx__operator_lesser(lhs, rhs));
+            result = !(Value__to_bool(linx__operator_lesser(lhs, rhs)));
+            break;
         case TYPE_FUNCTION:
-            return false;
+            result = false;
+            break;
     }
 
     return Value__from_bool(result);
@@ -669,19 +675,25 @@ Value* range__builtin_def(Value** environment, Value** arguments) {
     Value* end = arguments[1];
     Value* step = arguments[2];
 
-    if (linx__operator_equals(start, end)) return Value__create_list();
+    if (Value__equals(start, end)) {
+        return Value__create_list();
+    }
 
     bool forwards = true;
-    if (linx__operator_greater(start, end)) forwards = false;
+    if (Value__to_bool(linx__operator_greater(start, end))) forwards = false;
 
-    Value* result = Value__create_list();
+    Value* result = Value__from_array(NULL, 0);
 
-    while (forwards ? linx__operator_lesser(start, end)
-                    : linx__operator_greater(start, end)) {
-        List__append((List*)result->raw, start);
-        linx__operator_assign(start, forwards
-                                         ? linx__operator_add(start, end)
-                                         : linx__operator_subtract(start, end));
+    if (forwards) {
+        while (Value__to_bool(linx__operator_lequals(start, end))) {
+            List__append((List*)result->raw, start);
+            Value__copy(&start, linx__operator_add(start, step));
+        }
+    } else {
+        while (Value__to_bool(linx__operator_gequals(start, end))) {
+            List__append((List*)result->raw, start);
+            Value__copy(&start, linx__operator_subtract(start, step));
+        }
     }
 
     return result;

@@ -82,7 +82,12 @@ if (!commands.includes(args[0])) {
 
 			const compileCommand = spawn(
 				cc,
-				[join(__dirname, '../tmp/tempcache.c'), '-Wall', '-Wpedantic'],
+				[
+					join(__dirname, '../tmp/tempcache.c'),
+					'-Wall',
+					'-Wpedantic',
+					'-std=c99',
+				],
 				{
 					cwd: process.cwd(),
 					stdio: 'inherit',
