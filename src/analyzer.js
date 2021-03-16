@@ -30,6 +30,8 @@ const analyzeVisitor = {
 			captures: [],
 		}
 
+		func.closure.define(ident.lexeme, null, false)
+
 		parameters.forEach((param) => {
 			func.closure.define(param.lexeme, null, true)
 		})

@@ -48,10 +48,21 @@ function unaryOp(operator, expr) {
 // list of function declarations in order. can be codegenned in reverse to lift closures
 let fnDecls = []
 
+function varOrConstDeclaration(ident, initializer) {
+	return `Value* ${ident.lexeme} = Value__create_nil(); Value__copy(&${
+		ident.lexeme
+	}, ${codegen(initializer)});`
+}
+
 const codegenVisitor = {
 	// decls
 	FunctionDeclaration: (ident, parameters, body, func) => {
-		fnDecls.push({ name: ident.lexeme, parameters, body })
+		fnDecls.push({
+			name: ident.lexeme,
+			parameters,
+			body,
+			captures: func.captures,
+		})
 		return `Value* ${ident.lexeme} = Value__create_fn(&${
 			ident.lexeme
 		}__linx_definition, ${
@@ -60,32 +71,19 @@ const codegenVisitor = {
 				: 'NULL'
 		}, ${func.captures.length});`
 	},
-	VariableDeclaration: (ident, initializer) => {
-		return `Value* ${ident.lexeme} = Value__create_nil(); Value__copy(&${
-			ident.lexeme
-		}, ${codegen(initializer)});`
-	},
-	ConstantDeclaration: (ident, initializer) => {
-		/*
-			TODO: figure out how to represent immutable variables in C
-
-			C's `const` won't provide enough information on mutation; perhaps
-			it might be possible to just represent it as a mutable data-type
-			enforcing immutability at compile-time instead.
-		*/
-		return `Value* ${ident.lexeme} = Value__create_nil(); Value__copy(&${
-			ident.lexeme
-		}, ${codegen(initializer)});`
-	},
+	VariableDeclaration: (ident, initializer) =>
+		varOrConstDeclaration(ident, initializer),
+	ConstantDeclaration: (ident, initializer) =>
+		varOrConstDeclaration(ident, initializer),
 
 	// stmts
 	ExpressionStatement: (expression) => {
 		return codegen(expression) + ';'
 	},
 	IfStatement: (condition, thenBlock, elseBlock) => {
-		return `if (${codegen(condition)} ${codegen(thenBlock)} ${
-			elseBlock ? `else ${codegen(elseBlock)}` : ''
-		}`
+		return `if (Value__to_bool(${codegen(condition)})) ${codegen(
+			thenBlock
+		)} ${elseBlock ? `else ${codegen(elseBlock)}` : ''}`
 	},
 	PrintStatement: (expression) => {
 		return `print(${codegen(expression)});`
@@ -103,7 +101,19 @@ const codegenVisitor = {
 
 	// exprs
 	AssignmentExpression: (expr, value) => {
-		return `Value__copy(&${codegen(expr)}, ${codegen(value)})`
+		let gennedExpr = codegen(expr)
+
+		if (
+			gennedExpr.startsWith('linx__operator_dot') ||
+			gennedExpr.startsWith('linx__operator_subscript')
+		) {
+			let variableSignature = Date.now()
+			return `Value* $temp__${variableSignature} = ${gennedExpr};\nValue__copy(&$temp__${variableSignature}, ${codegen(
+				value
+			)})`
+		}
+
+		return `Value__copy(&${gennedExpr}, ${codegen(value)})`
 	},
 	BinaryExpression: (left, operator, right) => {
 		return binaryOp(left, operator, right)
@@ -199,6 +209,9 @@ function compile(source) {
 			let fnDef = `Value* ${
 				fn.name
 			}__linx_definition(Value** environment, Value** arguments) {
+					Value* ${fn.name} = Value__create_fn(&${
+				fn.name
+			}__linx_definition, environment, ${fn.captures.length});
 					${fn.parameters
 						.map(
 							(param, i) =>
@@ -214,17 +227,23 @@ function compile(source) {
 		})
 	}
 
-	return `${compiledFunctions}
-		
-        int main() {
-			${builtins
-				.map(
-					(fn) =>
-						`Value* ${fn} = Value__create_fn(&${fn}__builtin_def, NULL, 0);`
-				)
-				.join('\n')}
-		    ${compiledStatements.join('\n')}
-		}`
+	return `
+#include "../runtime.h"
+
+${compiledFunctions}
+
+int main(int argc, char **argv) {
+	tgc_start(&gc, &argc);
+	${builtins
+		.map(
+			(fn) =>
+				`Value* ${fn} = Value__create_fn(&${fn}__builtin_def, NULL, 0);`
+		)
+		.join('\n')}
+    ${compiledStatements.join('\n')}
+	tgc_stop(&gc);
+	return 0;
+}`
 }
 
 module.exports = { compile }
