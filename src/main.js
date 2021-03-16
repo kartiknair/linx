@@ -1,4 +1,4 @@
-const { join } = require('path')
+const { join, resolve } = require('path')
 const { spawn } = require('child_process')
 const { readFileSync, existsSync, writeFileSync, mkdirSync } = require('fs')
 
@@ -63,12 +63,12 @@ if (!commands.includes(args[0])) {
 
 	switch (args[0]) {
 		case 'run': {
-			const JSOutput = compileJS(fileContents)
+			const JSOutput = compileJS(fileContents, resolve(fileName))
 			eval(JSOutput)
 			break
 		}
 		case 'compile': {
-			const c = compile(fileContents)
+			const c = compile(fileContents, resolve(fileName))
 
 			if (!existsSync(join(__dirname, '../tmp'))) {
 				mkdirSync(join(__dirname, '../tmp'))
@@ -105,11 +105,11 @@ if (!commands.includes(args[0])) {
 			break
 		}
 		case 'emit-c': {
-			console.log(compile(fileContents))
+			console.log(compile(fileContents, resolve(fileName)))
 			break
 		}
 		case 'emit-js': {
-			console.log(compileJS(fileContents))
+			console.log(compileJS(fileContents, resolve(fileName)))
 			break
 		}
 	}

@@ -1,8 +1,11 @@
 const { walk } = require('./walk')
 const { Lexer } = require('./lexer')
 const { Parser } = require('./parser')
-const { readFileSync } = require('fs')
+const { resolve, dirname } = require('path')
+const { readFileSync, existsSync } = require('fs')
 const { Token } = require('./token')
+
+const cwd = process.cwd()
 
 /*
     removes instances of `ImportExpression` & `ExportDeclaration`
@@ -10,7 +13,7 @@ const { Token } = require('./token')
 
     is shared by both the JS interpreter & the C compiled runtime.
 */
-function bundle(ast) {
+function bundle(ast, path = cwd) {
 	let linxExports = []
 
 	ast = walk(ast, {
@@ -19,21 +22,21 @@ function bundle(ast) {
 			return {
 				ident,
 				parameters,
-				body: bundle(body),
+				body: bundle(body, path),
 				type: 'FunctionDeclaration',
 			}
 		},
 		VariableDeclaration: (ident, initializer) => {
 			return {
 				ident,
-				initializer: bundle(initializer),
+				initializer: bundle(initializer, path),
 				type: 'VariableDeclaration',
 			}
 		},
 		ConstantDeclaration: (ident, initializer) => {
 			return {
 				ident,
-				initializer: bundle(initializer),
+				initializer: bundle(initializer, path),
 				type: 'ConstantDeclaration',
 			}
 		},
@@ -41,48 +44,48 @@ function bundle(ast) {
 		// stmts
 		ExpressionStatement: (expression) => {
 			return {
-				expression: bundle(expression),
+				expression: bundle(expression, path),
 				type: 'ExpressionStatement',
 			}
 		},
 		IfStatement: (condition, thenBlock, elseBlock) => {
 			return {
-				condition: bundle(condition),
-				thenBlock: bundle(thenBlock),
-				elseBlock: bundle(elseBlock),
+				condition: bundle(condition, path),
+				thenBlock: bundle(thenBlock, path),
+				elseBlock: bundle(elseBlock, path),
 				type: 'IfStatement',
 			}
 		},
 		PrintStatement: (expression) => {
 			return {
-				expression: bundle(expression),
+				expression: bundle(expression, path),
 				type: 'PrintStatement',
 			}
 		},
 		ReturnStatement: (expression) => {
 			return {
-				expression: bundle(expression),
+				expression: bundle(expression, path),
 				type: 'ReturnStatement',
 			}
 		},
 		ForStatement: (ident, iterable, body) => {
 			return {
 				ident,
-				iterable: bundle(iterable),
-				body: bundle(body),
+				iterable: bundle(iterable, path),
+				body: bundle(body, path),
 				type: 'ForStatement',
 			}
 		},
 		WhileStatement: (condition, body) => {
 			return {
-				condition: bundle(condition),
-				body: bundle(body),
+				condition: bundle(condition, path),
+				body: bundle(body, path),
 				type: 'WhileStatement',
 			}
 		},
 		Block: (statements) => {
 			return {
-				statements: bundle(statements),
+				statements: bundle(statements, path),
 				type: 'Block',
 			}
 		},
@@ -90,35 +93,43 @@ function bundle(ast) {
 		// exprs
 		AssignmentExpression: (expr, value) => {
 			return {
-				target: bundle(expr),
-				value: bundle(value),
+				target: bundle(expr, path),
+				value: bundle(value, path),
 				type: 'AssignmentExpression',
 			}
 		},
 		BinaryExpression: (left, operator, right) => {
 			return {
-				left: bundle(left),
+				left: bundle(left, path),
 				operator,
-				right: bundle(right),
+				right: bundle(right, path),
 				type: 'BinaryExpression',
 			}
 		},
 		UnaryExpression: (operator, expression) => {
 			return {
 				operator,
-				expression: bundle(expression),
+				expression: bundle(expression, path),
 				type: 'UnaryExpression',
 			}
 		},
 		GetExpression: (object, ident) => {
-			return { object: bundle(object), ident, type: 'GetExpression' }
+			return {
+				object: bundle(object, path),
+				ident,
+				type: 'GetExpression',
+			}
 		},
 		IndexExpression: (array, index) => {
-			return { array: bundle(array), index, type: 'IndexExpression' }
+			return {
+				array: bundle(array, path),
+				index,
+				type: 'IndexExpression',
+			}
 		},
 		CallExpression: (callee, args) => {
 			return {
-				callee: bundle(callee),
+				callee: bundle(callee, path),
 				args: args.map(bundle),
 				type: 'CallExpression',
 			}
@@ -126,13 +137,13 @@ function bundle(ast) {
 		FunctionExpression: (parameters, body) => {
 			return {
 				parameters,
-				body: bundle(body),
+				body: bundle(body, path),
 				type: 'FunctionExpression',
 			}
 		},
 		GroupExpression: (expression) => {
 			return {
-				expression: bundle(expression),
+				expression: bundle(expression, path),
 				type: 'GroupExpression',
 			}
 		},
@@ -143,7 +154,7 @@ function bundle(ast) {
 		},
 		ObjectLiteral: (pairs) => {
 			return {
-				pairs: pairs.map((pair) => [pair[0], bundle(pair[1])]),
+				pairs: pairs.map((pair) => [pair[0], bundle(pair[1])], path),
 				type: 'ObjectLiteral',
 			}
 		},
@@ -151,10 +162,21 @@ function bundle(ast) {
 		// module system
 		ExportDeclaration(declaration) {
 			linxExports.push(declaration.ident.lexeme)
-			return bundle(declaration)
+			return bundle(declaration, path)
 		},
-		ImportExpression(path) {
-			const contents = readFileSync(path.lexeme.slice(1, -1), 'utf-8')
+		ImportExpression(importPath) {
+			const importedPath = resolve(
+				dirname(path),
+				importPath.lexeme.slice(1, -1)
+			)
+
+			if (!existsSync(importedPath)) {
+				throw new Error(
+					`Imported file: '${importedPath}' does not exist.`
+				)
+			}
+
+			const contents = readFileSync(importedPath, 'utf-8')
 
 			let l = new Lexer(contents)
 			let p = new Parser(l.scanTokens())
@@ -164,7 +186,7 @@ function bundle(ast) {
 					expression: {
 						parameters: [],
 						body: {
-							statements: bundle(p.parse()),
+							statements: bundle(p.parse(), importedPath),
 							type: 'Block',
 						},
 						type: 'FunctionExpression',

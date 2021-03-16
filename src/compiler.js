@@ -192,13 +192,13 @@ function codegen(node) {
 	return walk(node, codegenVisitor)
 }
 
-function compile(source) {
+function compile(source, path) {
 	let lexer = new Lexer(source)
 	const tokens = lexer.scanTokens()
 
 	let parser = new Parser(tokens)
 	let ast = parser.parse()
-	ast = bundle(ast)
+	ast = bundle(ast, path)
 	ast = analyze(ast)
 
 	const compiledStatements = codegen(ast)
