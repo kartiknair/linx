@@ -1,7 +1,7 @@
 const { Token } = require('./token')
 
 function panic(token, message) {
-	console.error(`[Parser Error: ${token.line}] ${message}`)
+	console.error(`[Parser Error: ${token.lineNo}] ${message}`)
 	process.exit(1)
 }
 
@@ -363,24 +363,25 @@ class Parser {
 
 		while (true) {
 			if (this.match('LEFT_PAREN')) expr = this.finishCall(expr)
-			else if (this.match('DOT', 'DOT')) {
-				this.advance()
-
-				let end = this.primary()
-				return {
-					callee: {
-						ident: new Token(
-							'IDENTIFIER',
-							'range',
-							null,
-							this.previous().line
-						),
-						type: 'VariableExpression',
-					},
-					args: [expr, end, { value: 1, type: 'Literal' }],
-					type: 'CallExpression',
+			else if (this.match('DOT')) {
+				// double dot: range operator (0..9)
+				if (this.match('DOT')) {
+					let end = this.primary()
+					return {
+						callee: {
+							ident: new Token(
+								'IDENTIFIER',
+								'range',
+								null,
+								this.previous().line
+							),
+							type: 'VariableExpression',
+						},
+						args: [expr, end, { value: 1, type: 'Literal' }],
+						type: 'CallExpression',
+					}
 				}
-			} else if (this.match('DOT')) {
+
 				const name = this.consume(
 					'IDENTIFIER',
 					"Expect property name after '.'."
