@@ -43,6 +43,7 @@ class Lexer {
 		this.start = 0
 		this.current = 0
 		this.line = 1
+		this.lineBegin = this.current
 
 		this.tokens = []
 	}
@@ -58,7 +59,15 @@ class Lexer {
 
 	addToken(type, literal) {
 		const text = this.source.substring(this.start, this.current)
-		this.tokens.push(new Token(type, text, literal, this.line))
+		this.tokens.push(
+			new Token(
+				type,
+				text,
+				literal,
+				this.line,
+				this.current - this.lineBegin
+			)
+		)
 	}
 
 	match(expected) {
@@ -92,20 +101,38 @@ class Lexer {
 		this.start = this.current
 		this.advance() // skip the '}'
 
-		this.tokens.push(new Token('PLUS', '+', null, this.line))
+		this.tokens.push(
+			new Token(
+				'PLUS',
+				'+',
+				null,
+				this.line,
+				this.current - this.lineBegin
+			)
+		)
 		this.string()
 	}
 
 	string() {
 		while (this.peek() !== '"' && !this.isAtEnd()) {
-			if (this.peek() === '\n') this.line++
-			else if (this.peek() === '$' && this.peekNext() === '{') {
+			if (this.peek() === '\n') {
+				this.line++
+				this.lineBegin = this.current
+			} else if (this.peek() === '$' && this.peekNext() === '{') {
 				const value = this.source.substring(
 					this.start + 1,
 					this.current
 				)
 				this.addToken('STRING', value)
-				this.tokens.push(new Token('PLUS', '+', null, this.line))
+				this.tokens.push(
+					new Token(
+						'PLUS',
+						'+',
+						null,
+						this.line,
+						this.current - this.lineBegin
+					)
+				)
 
 				return this.interpolation()
 			}
@@ -224,6 +251,7 @@ class Lexer {
 				break
 			case '\n':
 				this.line++
+				this.lineBegin = this.current
 				break
 			case '"':
 				this.string()
@@ -247,7 +275,9 @@ class Lexer {
 			this.scanToken()
 		}
 
-		this.tokens.push(new Token('EOF', '', null, this.line))
+		this.tokens.push(
+			new Token('EOF', '', null, this.line, this.current - this.lineBegin)
+		)
 		return this.tokens
 	}
 }
