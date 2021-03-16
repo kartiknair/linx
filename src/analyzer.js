@@ -97,23 +97,56 @@ const analyzeVisitor = {
 	},
 
 	// exprs
-	AssignmentExpression: (ident, value) => {
-		if (
-			inFunction &&
-			env.get(ident.lexeme) &&
-			env.get(ident.lexeme).steps > 0
+	AssignmentExpression: (target, value) => {
+		// TODO: handle other types like GetExpressions or IndexExpressions
+		if (target.type === 'VariableExpression') {
+			env.assign(target.ident.lexeme, null)
+		} else if (
+			target.type === 'GetExpression' ||
+			target.type === 'IndexExpression'
 		) {
-			// the first time this external variable is used is when assigning to it
-			if (!closureCaptures.has(ident.lexeme)) {
-				closureCaptures.add(ident.lexeme)
+			let obj =
+				target.type === 'GetExpression' ? target.object : target.array
+
+			// to find the root of a nested get (x.y[z].t => x)
+			while (
+				obj.type === 'GetExpression' ||
+				obj.type === 'IndexExpression'
+			) {
+				obj = obj.type === 'GetExpression' ? obj.object : obj.array
 			}
 
-			ident.lexeme = `environment[${[...closureCaptures].indexOf(
-				ident.lexeme
+			/*
+				obj is now a primary expression, meaning it can only be a few value.
+				However only of these is an "assignable values", the Variable Expression.
+			*/
+			if (obj.type === 'VariableExpression') {
+				env.assign(obj.ident.lexeme, null)
+			} else {
+				throw new Error('Assigning to a literal value.')
+			}
+		}
+
+		if (
+			inFunction &&
+			env.get(target.ident.lexeme) &&
+			env.get(target.ident.lexeme).steps > 0
+		) {
+			// the first time this external variable is used is when assigning to it
+			if (!closureCaptures.has(target.ident.lexeme)) {
+				closureCaptures.add(target.ident.lexeme)
+			}
+
+			target.ident.lexeme = `environment[${[...closureCaptures].indexOf(
+				target.ident.lexeme
 			)}]`
 		}
 
-		return { ident, value: analyze(value), type: 'AssignmentExpression' }
+		return {
+			target,
+			value: analyze(value),
+			type: 'AssignmentExpression',
+		}
 	},
 	BinaryExpression: (left, operator, right) => {
 		return {

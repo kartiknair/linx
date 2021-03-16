@@ -1,0 +1,22 @@
+l := [1, 2, 3, 4]
+
+p := {
+    p1: {
+        p2: {
+            x: "hello"
+        },
+        y: "hello"
+    },
+    z: "hello"
+}
+
+// all of the below should error out pre-compilation
+l = [1, 2]
+l[0] = "foo"
+l[0][1][3] = "foo"
+
+p = {x: 1, y: 2}
+p.p1.p2.x = "foo"
+
+([1, 2, 3])[0] = 4
+({x: "cool", y: "cooler"}).x = 45
