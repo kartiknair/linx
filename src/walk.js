@@ -1,6 +1,6 @@
 function walk(ast, visitor) {
 	const walkNode = (node) => {
-		if (node.type in visitor) {
+		if (node && node.type in visitor) {
 			return visitor[node.type](...Object.values(node))
 		} else {
 			return node

@@ -66,9 +66,7 @@ if (!commands.includes(args[0])) {
 			break
 		}
 		case 'compile': {
-			let c = compile(fileContents)
-			let runtime = readFileSync(join(__dirname, '../runtime.c'), 'utf-8')
-			c = runtime + c
+			const c = compile(fileContents)
 
 			if (!existsSync(join(__dirname, '../tmp'))) {
 				mkdirSync(join(__dirname, '../tmp'))
@@ -97,7 +95,7 @@ if (!commands.includes(args[0])) {
 			compileCommand.on('close', (code) => {
 				if (code === 0) {
 					console.log(
-						'program was compiled to executable successfully'
+						'Program was compiled to executable successfully!'
 					)
 				}
 			})

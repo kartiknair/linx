@@ -3,12 +3,21 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "gc.h"
+
+/*
+    alias the GCs malloc function to allow for easily
+    switching between GCs and trying different ones.
+*/
+static tgc_t gc;
+static inline void* linx_malloc(size_t size) { return tgc_alloc(&gc, size); }
+
 void string_concat(char** old, const char* to_add) {
     size_t old_length = strlen(*old) + 1;
-    char* old_copy = malloc(old_length);
+    char* old_copy = linx_malloc(old_length);
     strcpy(old_copy, *old);
 
-    *old = malloc(old_length + strlen(to_add) + 1);
+    *old = linx_malloc(old_length + strlen(to_add) + 1);
     strcpy(*old, old_copy);
     free(old_copy);
     strcat(*old, to_add);
@@ -16,7 +25,7 @@ void string_concat(char** old, const char* to_add) {
 
 char* double_to_charptr(double num) {
     int length = snprintf(NULL, 0, "%g", num);
-    char* str = malloc(length + 1);
+    char* str = linx_malloc(length + 1);
     snprintf(str, length + 1, "%g", num);
     return str;
 }
@@ -61,7 +70,7 @@ typedef struct {
 void Value__copy(Value** lhs, Value* rhs) {
     free(*lhs);
 
-    *lhs = malloc(sizeof(Value));
+    *lhs = linx_malloc(sizeof(Value));
     (*lhs)->type = rhs->type;
 
     switch (rhs->type) {
@@ -70,28 +79,28 @@ void Value__copy(Value** lhs, Value* rhs) {
             break;
         }
         case TYPE_BOOLEAN: {
-            (*lhs)->raw = malloc(sizeof(bool));
+            (*lhs)->raw = linx_malloc(sizeof(bool));
             *(bool*)(*lhs)->raw = *(bool*)rhs->raw;
             break;
         }
         case TYPE_NUMBER: {
-            (*lhs)->raw = malloc(sizeof(double));
+            (*lhs)->raw = linx_malloc(sizeof(double));
             *(double*)(*lhs)->raw = *(double*)rhs->raw;
             break;
         }
         case TYPE_STRING: {
-            (*lhs)->raw = malloc(sizeof(char*));
-            *(char**)(*lhs)->raw = malloc(strlen(*(char**)rhs->raw) + 1);
+            (*lhs)->raw = linx_malloc(sizeof(char*));
+            *(char**)(*lhs)->raw = linx_malloc(strlen(*(char**)rhs->raw) + 1);
             strcpy(*(char**)(*lhs)->raw, *(char**)rhs->raw);
             break;
         }
         case TYPE_LIST: {
-            (*lhs)->raw = malloc(sizeof(List));
+            (*lhs)->raw = linx_malloc(sizeof(List));
             ((List*)(*lhs)->raw)->capacity = ((List*)rhs->raw)->capacity;
             ((List*)(*lhs)->raw)->length = ((List*)rhs->raw)->length;
 
             ((List*)(*lhs)->raw)->arr =
-                malloc(sizeof(Value*) * ((List*)rhs->raw)->length);
+                linx_malloc(sizeof(Value*) * ((List*)rhs->raw)->length);
 
             for (size_t i = 0; i < ((List*)rhs->raw)->length; i++) {
                 Value__copy(&((List*)(*lhs)->raw)->arr[i],
@@ -101,9 +110,9 @@ void Value__copy(Value** lhs, Value* rhs) {
             break;
         }
         case TYPE_OBJECT: {
-            (*lhs)->raw = malloc(sizeof(Object));
-            ((Object*)(*lhs)->raw)->keys = malloc(sizeof(List));
-            ((Object*)(*lhs)->raw)->values = malloc(sizeof(List));
+            (*lhs)->raw = linx_malloc(sizeof(Object));
+            ((Object*)(*lhs)->raw)->keys = linx_malloc(sizeof(List));
+            ((Object*)(*lhs)->raw)->values = linx_malloc(sizeof(List));
 
             ((Object*)(*lhs)->raw)->keys->capacity =
                 ((Object*)rhs->raw)->keys->capacity;
@@ -114,10 +123,10 @@ void Value__copy(Value** lhs, Value* rhs) {
             ((Object*)(*lhs)->raw)->values->length =
                 ((Object*)rhs->raw)->values->length;
 
-            ((Object*)(*lhs)->raw)->keys->arr =
-                malloc(sizeof(Value*) * ((Object*)(*lhs)->raw)->keys->length);
-            ((Object*)(*lhs)->raw)->values->arr =
-                malloc(sizeof(Value*) * ((Object*)(*lhs)->raw)->values->length);
+            ((Object*)(*lhs)->raw)->keys->arr = linx_malloc(
+                sizeof(Value*) * ((Object*)(*lhs)->raw)->keys->length);
+            ((Object*)(*lhs)->raw)->values->arr = linx_malloc(
+                sizeof(Value*) * ((Object*)(*lhs)->raw)->values->length);
 
             for (size_t i = 0; i < ((Object*)rhs->raw)->keys->length; i++) {
                 Value__copy(&((Object*)(*lhs)->raw)->keys->arr[i],
@@ -129,9 +138,9 @@ void Value__copy(Value** lhs, Value* rhs) {
             break;
         }
         case TYPE_FUNCTION: {
-            (*lhs)->raw = malloc(sizeof(Function));
+            (*lhs)->raw = linx_malloc(sizeof(Function));
             ((Function*)(*lhs)->raw)->call = ((Function*)rhs->raw)->call;
-            ((Function*)(*lhs)->raw)->environment = malloc(
+            ((Function*)(*lhs)->raw)->environment = linx_malloc(
                 sizeof(Value*) * ((Function*)rhs->raw)->environment_length);
 
             for (size_t i = 0; i < ((Function*)rhs->raw)->environment_length;
@@ -146,7 +155,7 @@ void Value__copy(Value** lhs, Value* rhs) {
 }
 
 Value* Value__create_nil() {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_NIL;
     result->raw = NULL;
     return result;
@@ -200,10 +209,10 @@ bool Value__equals(Value* lhs, Value* rhs) {
 }
 
 List* List__create() {
-    List* result = malloc(sizeof(List));
+    List* result = linx_malloc(sizeof(List));
     result->capacity = 8;
     result->length = 0;
-    result->arr = calloc(8, sizeof(Value));
+    result->arr = linx_malloc(8 * sizeof(Value));
     return result;
 }
 
@@ -214,7 +223,7 @@ void List__grow(List* list) {
         Value** old_arr = list->arr;
 
         list->capacity *= 2;
-        list->arr = calloc(list->capacity, sizeof(Value*));
+        list->arr = linx_malloc(list->capacity * sizeof(Value*));
         memcpy(list->arr, old_arr, sizeof(Value*) * old_capacity);
     }
 }
@@ -231,11 +240,11 @@ Value* Function__call(Function* fn, Value** arguments) {
 
 Function* Function__create(fnptr fn, Value** environment,
                            size_t environment_length) {
-    Function* result = malloc(sizeof(Function));
+    Function* result = linx_malloc(sizeof(Function));
     result->call = fn;
 
     if (environment_length > 0) {
-        result->environment = malloc(sizeof(Value*) * environment_length);
+        result->environment = linx_malloc(sizeof(Value*) * environment_length);
         memcpy(result->environment, environment,
                sizeof(Value*) * environment_length);
         result->environment_length = environment_length;
@@ -247,46 +256,46 @@ Function* Function__create(fnptr fn, Value** environment,
 }
 
 Value* Value__from_bool(bool value) {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_BOOLEAN;
-    result->raw = malloc(sizeof(bool));
+    result->raw = linx_malloc(sizeof(bool));
     *(bool*)result->raw = value;
     return result;
 }
 
 Value* Value__from_double(double value) {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_NUMBER;
-    result->raw = malloc(sizeof(double));
+    result->raw = linx_malloc(sizeof(double));
     *(double*)result->raw = value;
     return result;
 }
 
 Value* Value__from_charptr(const char* str) {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_STRING;
-    result->raw = malloc(sizeof(char**));
-    *(char**)result->raw = malloc(strlen(str) + 1);
+    result->raw = linx_malloc(sizeof(char**));
+    *(char**)result->raw = linx_malloc(strlen(str) + 1);
     strcpy(*(char**)result->raw, str);
     return result;
 }
 
 Value* Value__create_list() {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_LIST;
     result->raw = List__create();
     return result;
 }
 
 Value* Value__from_array(Value* arr[], size_t count) {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_LIST;
-    result->raw = malloc(sizeof(List));
+    result->raw = linx_malloc(sizeof(List));
 
     if (count == 0) {
         result->raw = List__create();
     } else {
-        ((List*)result->raw)->arr = calloc(count, sizeof(Value*));
+        ((List*)result->raw)->arr = linx_malloc(count * sizeof(Value*));
         ((List*)result->raw)->length = count;
         ((List*)result->raw)->capacity = count;
         memcpy(((List*)result->raw)->arr, arr, sizeof(Value*) * count);
@@ -304,14 +313,14 @@ Value* Value__create_fn(fnptr fn, Value** environment,
 }
 
 Object* Object__create() {
-    Object* result = malloc(sizeof(Object));
+    Object* result = linx_malloc(sizeof(Object));
     result->keys = List__create();
     result->values = List__create();
     return result;
 }
 
 Value* Value__create_object() {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_OBJECT;
     result->raw = Object__create();
     return result;
@@ -344,7 +353,7 @@ void Object__set(Object* object, Value* key, Value* value) {
 
 Value* Value__create_object_from_arrs(Value** keys, Value** values,
                                       size_t size) {
-    Value* result = malloc(sizeof(Value));
+    Value* result = linx_malloc(sizeof(Value));
     result->type = TYPE_OBJECT;
     result->raw = Object__create();
 
@@ -578,8 +587,12 @@ Value* linx__operator_divide(Value* lhs, Value* rhs) {
 }
 // lhs % rhs
 Value* linx__operator_mod(Value* lhs, Value* rhs) {
-    // TODO: implement
-    return Value__create_nil();
+    if (lhs->type == TYPE_NUMBER && rhs->type == TYPE_NUMBER) {
+        Value* result = Value__from_double(*(int*)lhs->raw % *(int*)rhs->raw);
+        return result;
+    } else {
+        return Value__create_nil();
+    }
 }
 
 /* <-- Other --> */
