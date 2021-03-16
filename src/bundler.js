@@ -90,7 +90,7 @@ function bundle(ast) {
 		// exprs
 		AssignmentExpression: (expr, value) => {
 			return {
-				expression: bundle(expr),
+				target: bundle(expr),
 				value: bundle(value),
 				type: 'AssignmentExpression',
 			}

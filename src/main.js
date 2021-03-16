@@ -3,10 +3,10 @@ const { spawn } = require('child_process')
 const { readFileSync, existsSync, writeFileSync, mkdirSync } = require('fs')
 
 const { compile } = require('./compiler')
-const { interpret } = require('./interpreter')
+const { compile: compileJS } = require('./js-compiler')
 
 const progName = 'linx'
-const commands = ['run', 'compile', 'emit-c']
+const commands = ['run', 'compile', 'emit-c', 'emit-js']
 const args = process.argv.slice(2)
 
 const globalHelpText = `
@@ -17,6 +17,7 @@ const globalHelpText = `
     run        Runs the provided Linx file.
     compile    Compiles the Linx file to an executable.
     emit-c     Writes compiled C code to stdout.
+    emit-js    Writes compile JS code to stdout.
 
   For more info, run any command with the \`--help\` flag
     $ ${progName} run --help`
@@ -24,7 +25,7 @@ const globalHelpText = `
 const commandHelpTexts = {
 	run: `
   Description
-    Runs the provided Linx file directly using the treewalk interpreter.
+    Runs the provided Linx file directly after compilation.
 
   Usage
     $ ${progName} run <filename>`,
@@ -62,7 +63,8 @@ if (!commands.includes(args[0])) {
 
 	switch (args[0]) {
 		case 'run': {
-			interpret(fileContents)
+			const JSOutput = compileJS(fileContents)
+			eval(JSOutput)
 			break
 		}
 		case 'compile': {
@@ -104,6 +106,10 @@ if (!commands.includes(args[0])) {
 		}
 		case 'emit-c': {
 			console.log(compile(fileContents))
+			break
+		}
+		case 'emit-js': {
+			console.log(compileJS(fileContents))
 			break
 		}
 	}

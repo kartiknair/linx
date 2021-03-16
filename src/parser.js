@@ -244,9 +244,7 @@ class Parser {
 					value,
 					type: 'AssignmentExpression',
 				}
-			}
-
-			panic(equals, 'Invalid assignment target.')
+			} else panic(equals, 'Invalid assignment target.')
 		}
 
 		return expr
