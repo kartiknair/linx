@@ -143,7 +143,7 @@ function compile(source) {
 	ast = analyze(ast)
 
 	let program = codegen(ast).join('\n')
-	let runtime = readFileSync(join(__dirname, '../runtime.js'))
+	let runtime = readFileSync(join(__dirname, './runtimes/js/runtime.js'))
 
 	return `${runtime} (function main() {${program}})()`
 }

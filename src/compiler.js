@@ -228,7 +228,7 @@ function compile(source) {
 	}
 
 	return `
-#include "../runtime.h"
+#include "../src/runtimes/c/runtime.h"
 
 ${compiledFunctions}
 
