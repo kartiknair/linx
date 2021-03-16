@@ -46,9 +46,14 @@ builtins.forEach((builtin, i) => {
 })
 
 function evaluateBlock({ statements }, localEnvironment) {
+	console.log('evaluating block!!', localEnvironment.get('n'), '\n\n')
 	let prevEnvironment = env
 	env = localEnvironment
-	statements.forEach(evaluate)
+	for (let stmt of statements) {
+		globalReturnValue = null
+		evaluate(stmt)
+		if (globalReturnValue !== null) break
+	}
 	env = prevEnvironment
 }
 
@@ -73,7 +78,8 @@ const evalVisitor = {
 			arity: () => parameters.length,
 			toString: () => `<fn ${ident.lexeme}>`,
 		}
-
+		func.closure.define(ident.lexeme, func, false)
+		console.log('hello')
 		env.define(ident.lexeme, func)
 	},
 	VariableDeclaration: (ident, initializer) => {
@@ -107,19 +113,23 @@ const evalVisitor = {
 		evaluate(expression)
 	},
 	IfStatement: (condition, thenBlock, elseBlock) => {
-		if (condition) {
+		if (evaluate(condition)) {
+			console.log('\ncondition was true', condition)
 			evaluate(thenBlock)
+			return
 		} else if (elseBlock !== null) {
+			console.log('\ncondition was not true & we have else block')
 			evaluate(elseBlock)
+			return
 		}
+
+		console.log('\ncondition was not true & no else block')
 	},
 	PrintStatement: (expression) => {
 		console.log(evaluate(expression))
 	},
 	ReturnStatement: (expression) => {
-		let value = null
-		if (expression !== null) value = evaluate(expression)
-		globalReturnValue = value
+		globalReturnValue = evaluate(expression)
 	},
 	ForStatement: (ident, iterable, body) => {
 		iterable = evaluate(iterable)
@@ -140,12 +150,12 @@ const evalVisitor = {
 	},
 
 	// exprs
-	AssignmentExpression: (expr, value) => {
-		if (expr.type === 'GetExpression') {
-			evaluate(expr.object)[expr.ident.lexeme] = evaluate(value)
-		} else if (expr.type === 'IndexExpression') {
-			evaluate(expr.array)[expr.index.value] = evaluate(value)
-		} else env.assign(expr.ident.lexeme, evaluate(value))
+	AssignmentExpression: (target, value) => {
+		if (target.type === 'GetExpression') {
+			evaluate(target.object)[target.ident.lexeme] = evaluate(value)
+		} else if (target.type === 'IndexExpression') {
+			evaluate(target.array)[target.index.value] = evaluate(value)
+		} else env.assign(target.ident.lexeme, evaluate(value))
 		return value
 	},
 	BinaryExpression: (left, operator, right) => {
@@ -228,6 +238,8 @@ function interpret(source) {
 
 	let parser = new Parser(tokens)
 	let ast = parser.parse()
+	console.log(ast[0].body.statements[0].condition)
+
 	ast = bundle(ast)
 
 	return evaluate(ast)
