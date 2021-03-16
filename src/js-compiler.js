@@ -87,7 +87,9 @@ const codegenVisitor = {
 		return `${codegen(callee)}(${codegen(args).join(', ')})`
 	},
 	FunctionExpression: (parameters, body, func) => {
-		return `(${parameters.join(', ')}) => ${codegen(body)}`
+		return `(${parameters
+			.map((param) => param.lexeme)
+			.join(', ')}) => ${codegen(body)}`
 	},
 	VariableExpression: (ident) => {
 		return ident.lexeme

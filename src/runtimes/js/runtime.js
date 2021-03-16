@@ -64,6 +64,12 @@ function toString(value) {
 	}
 }
 
+function keys(value) {
+	if (type(value) === 'object') {
+		return Object.keys(value)
+	} else return null
+}
+
 function linx__truthy(value) {
 	if (value === null) return false
 

@@ -137,7 +137,7 @@ const codegenVisitor = {
 	FunctionExpression: (parameters, body, func) => {
 		const name = getFnId()
 
-		fnDecls.push({ name, parameters, body })
+		fnDecls.push({ name, parameters, body, captures: func.captures })
 		return `Value__create_fn(&${name}__linx_definition, ${
 			func.captures.length > 0
 				? `(Value*[]){${func.captures.join(', ')}}`
@@ -206,6 +206,8 @@ function compile(source, path) {
 
 	while (fnDecls.length !== 0) {
 		fnDecls.forEach((fn) => {
+			console.log(fn)
+
 			let fnDef = `Value* ${
 				fn.name
 			}__linx_definition(Value** environment, Value** arguments) {

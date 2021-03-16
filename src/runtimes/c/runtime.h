@@ -716,7 +716,16 @@ Value* toString__builtin_def(Value** environment, Value** arguments) {
     return Value__from_charptr(Value__to_charptr(arguments[0]));
 }
 
-// Value* print__builtin_def(Value** environment, Value** arguments) {
-//     printf("%s\n", Value__to_charptr(arguments[0]));
-//     return Value__create_nil();
-// }
+Value* print__builtin_def(Value** environment, Value** arguments) {
+    printf("%s\n", Value__to_charptr(arguments[0]));
+    return Value__create_nil();
+}
+
+Value* keys__builtin_def(Value** environment, Value** arguments) {
+    if (arguments[0]->type == TYPE_OBJECT) {
+        return Value__from_array(((Object*)arguments[0]->raw)->keys->arr,
+                                 ((Object*)arguments[0]->raw)->keys->length);
+    }
+
+    return Value__create_nil();
+}

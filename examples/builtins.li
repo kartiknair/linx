@@ -7,3 +7,10 @@ let sum = fn (a, b) {
 print len(l)
 print type(l)
 print range(10, 0, 3)
+
+let p = {
+    x: 4,
+    y: 45
+}
+
+print keys(p)
