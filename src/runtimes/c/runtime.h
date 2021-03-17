@@ -19,7 +19,6 @@ void string_concat(char** old, const char* to_add) {
 
     *old = linx_malloc(old_length + strlen(to_add) + 1);
     strcpy(*old, old_copy);
-    free(old_copy);
     strcat(*old, to_add);
 }
 
@@ -67,87 +66,93 @@ typedef struct {
     size_t environment_length;
 } Function;
 
-void Value__copy(Value** lhs, Value* rhs) {
-    free(*lhs);
-
-    *lhs = linx_malloc(sizeof(Value));
-    (*lhs)->type = rhs->type;
+void Value__copy(Value* lhs, Value* rhs) {
+    lhs->type = rhs->type;
 
     switch (rhs->type) {
         case TYPE_NIL: {
-            (*lhs)->raw = NULL;
+            lhs->raw = NULL;
             break;
         }
         case TYPE_BOOLEAN: {
-            (*lhs)->raw = linx_malloc(sizeof(bool));
-            *(bool*)(*lhs)->raw = *(bool*)rhs->raw;
+            lhs->raw = linx_malloc(sizeof(bool));
+            *(bool*)lhs->raw = *(bool*)rhs->raw;
             break;
         }
         case TYPE_NUMBER: {
-            (*lhs)->raw = linx_malloc(sizeof(double));
-            *(double*)(*lhs)->raw = *(double*)rhs->raw;
+            lhs->raw = linx_malloc(sizeof(double));
+            *(double*)lhs->raw = *(double*)rhs->raw;
             break;
         }
         case TYPE_STRING: {
-            (*lhs)->raw = linx_malloc(sizeof(char*));
-            *(char**)(*lhs)->raw = linx_malloc(strlen(*(char**)rhs->raw) + 1);
-            strcpy(*(char**)(*lhs)->raw, *(char**)rhs->raw);
+            lhs->raw = linx_malloc(sizeof(char*));
+            *(char**)lhs->raw = linx_malloc(strlen(*(char**)rhs->raw) + 1);
+            strcpy(*(char**)lhs->raw, *(char**)rhs->raw);
             break;
         }
         case TYPE_LIST: {
-            (*lhs)->raw = linx_malloc(sizeof(List));
-            ((List*)(*lhs)->raw)->capacity = ((List*)rhs->raw)->capacity;
-            ((List*)(*lhs)->raw)->length = ((List*)rhs->raw)->length;
+            lhs->raw = linx_malloc(sizeof(List));
+            ((List*)lhs->raw)->capacity = ((List*)rhs->raw)->capacity;
+            ((List*)lhs->raw)->length = ((List*)rhs->raw)->length;
 
-            ((List*)(*lhs)->raw)->arr =
+            ((List*)lhs->raw)->arr =
                 linx_malloc(sizeof(Value*) * ((List*)rhs->raw)->length);
 
             for (size_t i = 0; i < ((List*)rhs->raw)->length; i++) {
-                Value__copy(&((List*)(*lhs)->raw)->arr[i],
+                ((List*)lhs->raw)->arr[i] = linx_malloc(sizeof(Value));
+                Value__copy(((List*)lhs->raw)->arr[i],
                             ((List*)rhs->raw)->arr[i]);
             }
 
             break;
         }
         case TYPE_OBJECT: {
-            (*lhs)->raw = linx_malloc(sizeof(Object));
-            ((Object*)(*lhs)->raw)->keys = linx_malloc(sizeof(List));
-            ((Object*)(*lhs)->raw)->values = linx_malloc(sizeof(List));
+            lhs->raw = linx_malloc(sizeof(Object));
+            ((Object*)lhs->raw)->keys = linx_malloc(sizeof(List));
+            ((Object*)lhs->raw)->values = linx_malloc(sizeof(List));
 
-            ((Object*)(*lhs)->raw)->keys->capacity =
+            ((Object*)lhs->raw)->keys->capacity =
                 ((Object*)rhs->raw)->keys->capacity;
-            ((Object*)(*lhs)->raw)->values->capacity =
+            ((Object*)lhs->raw)->values->capacity =
                 ((Object*)rhs->raw)->values->capacity;
-            ((Object*)(*lhs)->raw)->keys->length =
+            ((Object*)lhs->raw)->keys->length =
                 ((Object*)rhs->raw)->keys->length;
-            ((Object*)(*lhs)->raw)->values->length =
+            ((Object*)lhs->raw)->values->length =
                 ((Object*)rhs->raw)->values->length;
 
-            ((Object*)(*lhs)->raw)->keys->arr = linx_malloc(
-                sizeof(Value*) * ((Object*)(*lhs)->raw)->keys->length);
-            ((Object*)(*lhs)->raw)->values->arr = linx_malloc(
-                sizeof(Value*) * ((Object*)(*lhs)->raw)->values->length);
+            ((Object*)lhs->raw)->keys->arr =
+                linx_malloc(sizeof(Value*) * ((Object*)lhs->raw)->keys->length);
+            ((Object*)lhs->raw)->values->arr = linx_malloc(
+                sizeof(Value*) * ((Object*)lhs->raw)->values->length);
 
             for (size_t i = 0; i < ((Object*)rhs->raw)->keys->length; i++) {
-                Value__copy(&((Object*)(*lhs)->raw)->keys->arr[i],
+                ((Object*)lhs->raw)->keys->arr[i] = linx_malloc(sizeof(Value));
+                Value__copy(((Object*)lhs->raw)->keys->arr[i],
                             ((Object*)rhs->raw)->keys->arr[i]);
-                Value__copy(&((Object*)(*lhs)->raw)->values->arr[i],
+                ((Object*)lhs->raw)->values->arr[i] =
+                    linx_malloc(sizeof(Value));
+                Value__copy(((Object*)lhs->raw)->values->arr[i],
                             ((Object*)rhs->raw)->values->arr[i]);
             }
 
             break;
         }
         case TYPE_FUNCTION: {
-            (*lhs)->raw = linx_malloc(sizeof(Function));
-            ((Function*)(*lhs)->raw)->call = ((Function*)rhs->raw)->call;
-            ((Function*)(*lhs)->raw)->environment = linx_malloc(
+            lhs->raw = linx_malloc(sizeof(Function));
+            ((Function*)lhs->raw)->call = ((Function*)rhs->raw)->call;
+            ((Function*)lhs->raw)->environment_length =
+                ((Function*)rhs->raw)->environment_length;
+            ((Function*)lhs->raw)->environment = linx_malloc(
                 sizeof(Value*) * ((Function*)rhs->raw)->environment_length);
 
-            for (size_t i = 0; i < ((Function*)rhs->raw)->environment_length;
-                 i++) {
-                ((Function*)(*lhs)->raw)->environment[i] =
-                    ((Function*)rhs->raw)->environment[i];
-            }
+            if (((Function*)rhs->raw)->environment_length > 0) {
+                for (size_t i = 0;
+                     i < ((Function*)rhs->raw)->environment_length; i++) {
+                    ((Function*)lhs->raw)->environment[i] =
+                        ((Function*)rhs->raw)->environment[i];
+                }
+            } else
+                ((Function*)lhs->raw)->environment = NULL;
 
             break;
         }
@@ -163,7 +168,7 @@ Value* Value__create_nil() {
 
 Value* Value__from_value(Value* value) {
     Value* result = Value__create_nil();
-    Value__copy(&result, value);
+    Value__copy(result, value);
     return result;
 }
 
@@ -224,14 +229,17 @@ void List__grow(List* list) {
 
         list->capacity *= 2;
         list->arr = linx_malloc(list->capacity * sizeof(Value*));
-        memcpy(list->arr, old_arr, sizeof(Value*) * old_capacity);
+        for (size_t i = 0; i < old_capacity; i++) {
+            Value__copy(list->arr[i], old_arr[i]);
+        }
     }
 }
 
 void List__append(List* list, Value* value) {
     List__grow(list);
     list->length++;
-    Value__copy(&list->arr[list->length - 1], value);
+    list->arr[list->length - 1] = linx_malloc(sizeof(Value));
+    Value__copy(list->arr[list->length - 1], value);
 }
 
 Value* Function__call(Function* fn, Value** arguments) {
@@ -245,9 +253,14 @@ Function* Function__create(fnptr fn, Value** environment,
 
     if (environment_length > 0) {
         result->environment = linx_malloc(sizeof(Value*) * environment_length);
-        memcpy(result->environment, environment,
-               sizeof(Value*) * environment_length);
         result->environment_length = environment_length;
+        for (size_t i = 0; i < environment_length; i++) {
+            /*
+                copying addresses instead of value because
+                closures capture by reference.
+            */
+            result->environment[i] = environment[i];
+        }
     } else {
         result->environment = NULL;
     }
@@ -298,7 +311,10 @@ Value* Value__from_array(Value* arr[], size_t count) {
         ((List*)result->raw)->arr = linx_malloc(count * sizeof(Value*));
         ((List*)result->raw)->length = count;
         ((List*)result->raw)->capacity = count;
-        memcpy(((List*)result->raw)->arr, arr, sizeof(Value*) * count);
+        for (size_t i = 0; i < count; i++) {
+            ((List*)result->raw)->arr[i] = linx_malloc(sizeof(Value));
+            Value__copy(((List*)result->raw)->arr[i], arr[i]);
+        }
     }
 
     return result;
@@ -347,7 +363,7 @@ void Object__set(Object* object, Value* key, Value* value) {
         List__append(object->values, value);
     } else {
         // otherwise update the key
-        Value__copy(&existing, value);
+        Value__copy(existing, value);
     }
 }
 
@@ -599,7 +615,7 @@ Value* linx__operator_mod(Value* lhs, Value* rhs) {
 
 // lhs = rhs
 Value* linx__operator_assign(Value* lhs, Value* rhs) {
-    Value__copy(&lhs, rhs);
+    Value__copy(lhs, rhs);
     return lhs;
 }
 
@@ -611,7 +627,8 @@ Value* linx__operator_dot(Value* obj, Value* key) {
 
 // arr[idx]
 Value* linx__operator_subscript(Value* arr, Value* idx) {
-    if (arr->type != TYPE_OBJECT && arr->type != TYPE_LIST) {
+    if (arr->type != TYPE_OBJECT && arr->type != TYPE_LIST &&
+        arr->type != TYPE_STRING) {
         return Value__create_nil();
     }
 
@@ -630,7 +647,13 @@ Value* linx__operator_subscript(Value* arr, Value* idx) {
             return Value__create_nil();
         }
 
-        return ((List*)arr->raw)->arr[(int)(*(double*)idx->raw)];
+        if (arr->type == TYPE_LIST) {
+            return ((List*)arr->raw)->arr[(int)(*(double*)idx->raw)];
+        } else {
+            char c = (*(char**)arr->raw)[(int)(*(double*)idx->raw)];
+            char tmp[] = {c, '\0'};
+            return Value__from_charptr(tmp);
+        }
     }
 }
 
@@ -700,12 +723,12 @@ Value* range__builtin_def(Value** environment, Value** arguments) {
     if (forwards) {
         while (Value__to_bool(linx__operator_lequals(start, end))) {
             List__append((List*)result->raw, start);
-            Value__copy(&start, linx__operator_add(start, step));
+            Value__copy(start, linx__operator_add(start, step));
         }
     } else {
         while (Value__to_bool(linx__operator_gequals(start, end))) {
             List__append((List*)result->raw, start);
-            Value__copy(&start, linx__operator_subtract(start, step));
+            Value__copy(start, linx__operator_subtract(start, step));
         }
     }
 

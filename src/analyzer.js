@@ -11,11 +11,16 @@ builtins.forEach((builtin) => {
 	env.define(builtin, null, false)
 })
 
-function analyzeBlock({ statements }, localEnvironment) {
+function analyzeBlock({ statements }, localEnvironment, localClosureCaptures) {
+	let prevCaptures = closureCaptures
 	let prevEnvironment = env
+
 	env = localEnvironment
+	closureCaptures = localClosureCaptures
 	statements = statements.map(analyze)
 	env = prevEnvironment
+	closureCaptures = prevCaptures
+
 	return statements
 }
 
@@ -36,10 +41,9 @@ const analyzeVisitor = {
 			func.closure.define(param.lexeme, null, true)
 		})
 
-		closureCaptures.clear()
-		body.statements = analyzeBlock(body, func.closure)
-		func.captures = Array.from(closureCaptures)
-		closureCaptures.clear()
+		let funcCaptures = new Set()
+		body.statements = analyzeBlock(body, func.closure, funcCaptures)
+		func.captures = Array.from(funcCaptures)
 
 		env.define(ident.lexeme, func)
 
@@ -73,8 +77,35 @@ const analyzeVisitor = {
 	// stmts
 	Block: (statements) => {
 		return {
-			statements: analyzeBlock({ statements }, new Environment(env)),
+			statements: analyzeBlock(
+				{ statements },
+				new Environment(env),
+				closureCaptures
+			),
 			type: 'Block',
+		}
+	},
+	ForStatement: (ident, iterable, body) => {
+		return {
+			ident,
+			iterable: analyze(iterable),
+			body: analyze(body),
+			type: 'ForStatement',
+		}
+	},
+	WhileStatement: (condition, body) => {
+		return {
+			condition: analyze(condition),
+			body: analyze(body),
+			type: 'WhileStatement',
+		}
+	},
+	IfStatement: (condition, thenBlock, elseBlock) => {
+		return {
+			condition: analyze(condition),
+			thenBlock: analyze(thenBlock),
+			elseBlock: analyze(elseBlock),
+			type: 'IfStatement',
 		}
 	},
 	PrintStatement: (expression) => {
@@ -129,6 +160,7 @@ const analyzeVisitor = {
 
 		if (
 			inFunction &&
+			!builtins.includes(target.ident.lexeme) &&
 			env.get(target.ident.lexeme) &&
 			env.get(target.ident.lexeme).steps > 0
 		) {
@@ -176,10 +208,9 @@ const analyzeVisitor = {
 			func.closure.define(param.lexeme, null, true)
 		})
 
-		closureCaptures.clear()
-		body.statements = analyzeBlock(body, func.closure)
+		let funcCaptures = new Set()
+		body.statements = analyzeBlock(body, func.closure, funcCaptures)
 		func.captures = Array.from(closureCaptures)
-		closureCaptures.clear()
 
 		inFunction = false
 
@@ -188,6 +219,7 @@ const analyzeVisitor = {
 	VariableExpression: (ident) => {
 		if (
 			inFunction &&
+			!builtins.includes(ident.lexeme) &&
 			env.get(ident.lexeme) &&
 			env.get(ident.lexeme).steps > 0
 		) {
@@ -206,7 +238,22 @@ const analyzeVisitor = {
 			type: 'VariableExpression',
 		}
 	},
+	GetExpression: (object, ident) => {
+		return {
+			object: analyze(object),
+			ident,
+			type: 'GetExpression',
+		}
+	},
+	IndexExpression: (array, index) => {
+		return {
+			array: analyze(array),
+			index: analyze(index),
+			type: 'IndexExpression',
+		}
+	},
 	CallExpression: (callee, args) => {
+		// console.log('callee: ', callee)
 		return {
 			callee: analyze(callee),
 			args: args.map(analyze),

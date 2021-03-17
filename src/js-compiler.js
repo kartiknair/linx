@@ -7,6 +7,23 @@ const { Parser } = require('./parser')
 const { bundle } = require('./bundler')
 const { analyze } = require('./analyzer')
 
+function binaryOp(left, operator, right) {
+	let op = ''
+
+	const operatorFunctionMap = {
+		and: '&&',
+		or: '||',
+		'==': '===',
+		'!=': '!==',
+	}
+
+	if (operator.lexeme in operatorFunctionMap) {
+		op = operatorFunctionMap[operator.lexeme]
+	} else op = operator.lexeme
+
+	return `${codegen(left)} ${op} ${codegen(right)}`
+}
+
 function varOrConstDeclaration(ident, initializer, type) {
 	return `${type} ${ident.lexeme} = ${codegen(initializer)};`
 }
@@ -68,17 +85,13 @@ const codegenVisitor = {
 		return `${codegen(target)} = ${codegen(value)}`
 	},
 	BinaryExpression: (left, operator, right) => {
-		return `${codegen(left)} ${
-			operator.lexeme === '==' || operator.lexeme === '!='
-				? operator.lexeme + '='
-				: operator.lexeme
-		} ${codegen(right)}`
+		return binaryOp(left, operator, right)
 	},
 	UnaryExpression: (operator, expression) => {
 		return `${operator.lexeme}${codegen(expression)}`
 	},
 	IndexExpression: (array, index) => {
-		return `${codegen(array)}[${codegen(index)})]`
+		return `${codegen(array)}[${codegen(index)}]`
 	},
 	GetExpression: (object, ident) => {
 		return `${codegen(object)}.${ident.lexeme}`
@@ -143,6 +156,8 @@ function compile(source, path) {
 	let ast = parser.parse()
 	ast = bundle(ast, path)
 	ast = analyze(ast)
+
+	// console.log(ast)
 
 	let program = codegen(ast).join('\n')
 	let runtime = readFileSync(join(__dirname, './runtimes/js/runtime.js'))

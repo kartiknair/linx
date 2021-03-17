@@ -49,7 +49,7 @@ function unaryOp(operator, expr) {
 let fnDecls = []
 
 function varOrConstDeclaration(ident, initializer) {
-	return `Value* ${ident.lexeme} = Value__create_nil(); Value__copy(&${
+	return `Value* ${ident.lexeme} = Value__create_nil(); Value__copy(${
 		ident.lexeme
 	}, ${codegen(initializer)});`
 }
@@ -93,7 +93,7 @@ const codegenVisitor = {
 	},
 	ForStatement: (ident, iterable, body) => {},
 	WhileStatement: (condition, body) => {
-		return `while (${codegen(condition)}) ${codegen(body)}`
+		return `while (Value__to_bool(${codegen(condition)})) ${codegen(body)}`
 	},
 	Block: (statements) => {
 		return `{${statements.map((stmt) => codegen(stmt)).join('\n')}}`
@@ -108,12 +108,12 @@ const codegenVisitor = {
 			gennedExpr.startsWith('linx__operator_subscript')
 		) {
 			let variableSignature = Date.now()
-			return `Value* $temp__${variableSignature} = ${gennedExpr};\nValue__copy(&$temp__${variableSignature}, ${codegen(
+			return `Value* $temp__${variableSignature} = ${gennedExpr};\nValue__copy($temp__${variableSignature}, ${codegen(
 				value
 			)})`
 		}
 
-		return `Value__copy(&${gennedExpr}, ${codegen(value)})`
+		return `Value__copy(${gennedExpr}, ${codegen(value)})`
 	},
 	BinaryExpression: (left, operator, right) => {
 		return binaryOp(left, operator, right)
@@ -205,12 +205,19 @@ function compile(source, path) {
 	let compiledFunctions = ''
 
 	while (fnDecls.length !== 0) {
-		fnDecls.forEach((fn) => {
-			console.log(fn)
+		console.log(fnDecls)
 
+		fnDecls.forEach((fn) => {
 			let fnDef = `Value* ${
 				fn.name
 			}__linx_definition(Value** environment, Value** arguments) {
+				${builtins
+					.map(
+						(fn) =>
+							`Value* ${fn} = Value__create_fn(&${fn}__builtin_def, NULL, 0);`
+					)
+					.join('\n')}
+					
 					Value* ${fn.name} = Value__create_fn(&${
 				fn.name
 			}__linx_definition, environment, ${fn.captures.length});

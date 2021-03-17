@@ -5,6 +5,8 @@ there are a few built-in functions:
 1. `len(something)` returns the length of `something` where something is either a string, list, or object
 2. `range(start, end, step)` returns a list of numbers based on the arguments. similar to python's `range`
 3. `toString(value)` converts any value to a string form
+4. `keys(obj)` returns the keys of an object value
+5. `iterator(value)` returns an iterator object appropriate for value's type. only works with strings, lists, & objects.
 
 std library:
 
@@ -22,15 +24,13 @@ std library:
 1. `list.map(list, callback)` loops through the list & assigns the result of callback to every element
 2. `list.slice(list, start, end)` returns a sub-list of a list
 3. `list.contains(list, value)` returns whether or not the value is in the list (`true`/`false`)
-4. `list.iterator(list)` returns an iterator for the provided list. see [iterator](#iterator) for more details
-5. `list.join(list, delimiter)` joins a list into a string with the provided delimiter
+4. `list.join(list, delimiter)` joins a list into a string with the provided delimiter
 
 ### `object`
 
 1. `object.keys(obj)` returns a list of keys that the object contains
 2. `object.values(obj)` returns a list of values that the object contains
 3. `object.contains(obj, key)` returns whether or not the given key is in the list (`true`/`false`)
-4. `object.iterator(obj)` returns an iterator for the provided object. see [iterator](#iterator) for more details
 
 ### `math`
 
