@@ -75,7 +75,7 @@ if (!commands.includes(args[0])) {
 			}
 			writeFileSync(join(__dirname, '../tmp/tempcache.c'), c)
 
-			let cc = 'CC'
+			let cc = 'cc'
 			if (args.includes('--cc')) {
 				cc = args[args.indexOf('--cc') + 1]
 			}
