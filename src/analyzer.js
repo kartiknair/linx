@@ -2,6 +2,7 @@ const { walk } = require('./walk')
 const { Environment } = require('./environment')
 const { builtins } = require('./builtins')
 
+let compilingC = true
 let inFunction = false
 let closureCaptures = new Set()
 
@@ -17,7 +18,7 @@ function analyzeBlock({ statements }, localEnvironment, localClosureCaptures) {
 
 	env = localEnvironment
 	closureCaptures = localClosureCaptures
-	statements = statements.map(analyze)
+	statements = statements.map((stmt) => analyze(stmt, compilingC))
 	env = prevEnvironment
 	closureCaptures = prevCaptures
 
@@ -61,7 +62,7 @@ const analyzeVisitor = {
 		env.define(ident.lexeme, null, true)
 		return {
 			ident,
-			initializer: analyze(initializer),
+			initializer: analyze(initializer, compilingC),
 			type: 'VariableDeclaration',
 		}
 	},
@@ -69,7 +70,7 @@ const analyzeVisitor = {
 		env.define(ident.lexeme, null, false)
 		return {
 			ident,
-			initializer: analyze(initializer),
+			initializer: analyze(initializer, compilingC),
 			type: 'ConstantDeclaration',
 		}
 	},
@@ -88,41 +89,41 @@ const analyzeVisitor = {
 	ForStatement: (ident, iterable, body) => {
 		return {
 			ident,
-			iterable: analyze(iterable),
-			body: analyze(body),
+			iterable: analyze(iterable, compilingC),
+			body: analyze(body, compilingC),
 			type: 'ForStatement',
 		}
 	},
 	WhileStatement: (condition, body) => {
 		return {
-			condition: analyze(condition),
-			body: analyze(body),
+			condition: analyze(condition, compilingC),
+			body: analyze(body, compilingC),
 			type: 'WhileStatement',
 		}
 	},
 	IfStatement: (condition, thenBlock, elseBlock) => {
 		return {
-			condition: analyze(condition),
-			thenBlock: analyze(thenBlock),
-			elseBlock: analyze(elseBlock),
+			condition: analyze(condition, compilingC),
+			thenBlock: analyze(thenBlock, compilingC),
+			elseBlock: analyze(elseBlock, compilingC),
 			type: 'IfStatement',
 		}
 	},
 	PrintStatement: (expression) => {
 		return {
-			expression: analyze(expression),
+			expression: analyze(expression, compilingC),
 			type: 'PrintStatement',
 		}
 	},
 	ExpressionStatement: (expression) => {
 		return {
-			expression: analyze(expression),
+			expression: analyze(expression, compilingC),
 			type: 'ExpressionStatement',
 		}
 	},
 	ReturnStatement: (expression) => {
 		return {
-			expression: analyze(expression),
+			expression: analyze(expression, compilingC),
 			type: 'ReturnStatement',
 		}
 	},
@@ -148,9 +149,9 @@ const analyzeVisitor = {
 			}
 
 			/*
-				obj is now a primary expression, meaning it can only be a few value.
-				However only of these is an "assignable values", the Variable Expression.
-			*/
+			obj is now a primary expression, meaning it can only be a few value.
+			However only of these is an "assignable values", the Variable Expression.
+		*/
 			if (obj.type === 'VariableExpression') {
 				env.assign(obj.ident.lexeme, null)
 			} else {
@@ -159,6 +160,7 @@ const analyzeVisitor = {
 		}
 
 		if (
+			compilingC &&
 			inFunction &&
 			!builtins.includes(target.ident.lexeme) &&
 			env.get(target.ident.lexeme) &&
@@ -176,22 +178,22 @@ const analyzeVisitor = {
 
 		return {
 			target,
-			value: analyze(value),
+			value: analyze(value, compilingC),
 			type: 'AssignmentExpression',
 		}
 	},
 	BinaryExpression: (left, operator, right) => {
 		return {
-			left: analyze(left),
+			left: analyze(left, compilingC),
 			operator,
-			right: analyze(right),
+			right: analyze(right, compilingC),
 			type: 'BinaryExpression',
 		}
 	},
 	UnaryExpression: (operator, expression) => {
 		return {
 			operator,
-			expression: analyze(expression),
+			expression: analyze(expression, compilingC),
 			type: 'UnaryExpression',
 		}
 	},
@@ -218,6 +220,7 @@ const analyzeVisitor = {
 	},
 	VariableExpression: (ident) => {
 		if (
+			compilingC &&
 			inFunction &&
 			!builtins.includes(ident.lexeme) &&
 			env.get(ident.lexeme) &&
@@ -240,43 +243,51 @@ const analyzeVisitor = {
 	},
 	GetExpression: (object, ident) => {
 		return {
-			object: analyze(object),
+			object: analyze(object, compilingC),
 			ident,
 			type: 'GetExpression',
 		}
 	},
 	IndexExpression: (array, index) => {
 		return {
-			array: analyze(array),
-			index: analyze(index),
+			array: analyze(array, compilingC),
+			index: analyze(index, compilingC),
 			type: 'IndexExpression',
 		}
 	},
 	CallExpression: (callee, args) => {
 		// console.log('callee: ', callee)
 		return {
-			callee: analyze(callee),
-			args: args.map(analyze),
+			callee: analyze(callee, compilingC),
+			args: args.map((arg) => analyze(arg, compilingC)),
 			type: 'CallExpression',
 		}
 	},
 	GroupExpression: (expression) => {
-		return { expression: analyze(expression), type: 'GroupExpression' }
+		return {
+			expression: analyze(expression, compilingC),
+			type: 'GroupExpression',
+		}
 	},
 
 	// literals
 	ArrayLiteral: (values) => {
-		return { values: values.map(analyze), type: 'ArrayLiteral' }
+		return {
+			values: values.map((val) => analyze(val, compilingC)),
+			type: 'ArrayLiteral',
+		}
 	},
 	ObjectLiteral: (pairs) => {
 		return {
-			pairs: pairs.map((pair) => [pair[0], analyze(pair[1])]),
+			pairs: pairs.map((pair) => [pair[0], analyze(pair[1], compilingC)]),
 			type: 'ObjectLiteral',
 		}
 	},
 }
 
-function analyze(node) {
+function analyze(node, compilingCArg) {
+	compilingC = compilingCArg
+	console.log('global compilingC is: ', compilingC)
 	return walk(node, analyzeVisitor)
 }
 

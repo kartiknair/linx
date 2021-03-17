@@ -199,7 +199,7 @@ function compile(source, path) {
 	let parser = new Parser(tokens)
 	let ast = parser.parse()
 	ast = bundle(ast, path)
-	ast = analyze(ast)
+	ast = analyze(ast, true)
 
 	const compiledStatements = codegen(ast)
 	let compiledFunctions = ''
