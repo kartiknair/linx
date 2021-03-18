@@ -1,0 +1,33 @@
+fn iterator(value) {
+    t := type(value)
+
+    if t == "object" {
+        let index = 0
+        objkeys := keys(value)
+
+        next := fn () {
+            index = index + 1
+            return [objKeys[index - 1], value[objKeys[index - 1]]]
+        }
+
+        valid := fn {
+            return index <= len(value) - 1
+        }
+
+        return {next: next, valid: valid}
+    }
+
+    if t == "list" or t == "string" {
+        let index = 0
+        next := fn () {
+            index = index + 1
+            return value[index - 1]
+        }
+        
+        valid := fn () {
+            return index <= len(value) - 1
+        }
+        
+        return {next: next, valid: valid}
+    }
+}

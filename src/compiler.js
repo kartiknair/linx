@@ -4,6 +4,7 @@ const { Parser } = require('./parser')
 const { analyze } = require('./analyzer')
 const { builtins } = require('./builtins')
 const { bundle } = require('./bundler')
+const { createCounter } = require('./util')
 
 function anonymousFnId() {
 	let count = -1
@@ -14,6 +15,7 @@ function anonymousFnId() {
 }
 
 const getFnId = anonymousFnId()
+const funcMangleCount = createCounter(0)
 
 function binaryOp(left, operator, right) {
 	const operatorFunctionMap = {
@@ -57,15 +59,25 @@ function varOrConstDeclaration(ident, initializer) {
 const codegenVisitor = {
 	// decls
 	FunctionDeclaration: (ident, parameters, body, func) => {
+		let mangleSignature = funcMangleCount()
+
 		fnDecls.push({
-			name: ident.lexeme,
+			name: ident.lexeme + mangleSignature,
 			parameters,
 			body,
 			captures: func.captures,
 		})
+
+		console.log(
+			'function',
+			ident.lexeme,
+			'is capturing',
+			func.captures.length,
+			'variaables'
+		)
 		return `Value* ${ident.lexeme} = Value__create_fn(&${
 			ident.lexeme
-		}__linx_definition, ${
+		}${mangleSignature}__linx_definition, ${
 			func.captures.length > 0
 				? `(Value*[]){${func.captures.join(', ')}}`
 				: 'NULL'
@@ -91,7 +103,18 @@ const codegenVisitor = {
 	ReturnStatement: (expression) => {
 		return `return ${codegen(expression)};`
 	},
-	ForStatement: (ident, iterable, body) => {},
+	ForStatement: (ident, iterable, body) => {
+		let iteratorSignature = Date.now()
+		return `Value* iterator__${iteratorSignature} = linx__operator_call(iterator, (Value*[]){${codegen(
+			iterable
+		)}});
+				while (Value__to_bool(linx__operator_call(linx__operator_dot(iterator__${iteratorSignature}, Value__from_charptr("valid")), NULL))) {
+					Value* ${
+						ident.lexeme
+					} = linx__operator_call(linx__operator_dot(iterator__${iteratorSignature}, Value__from_charptr("next")), NULL);
+					${codegen(body).slice(1, -1)}
+				}`
+	},
 	WhileStatement: (condition, body) => {
 		return `while (Value__to_bool(${codegen(condition)})) ${codegen(body)}`
 	},

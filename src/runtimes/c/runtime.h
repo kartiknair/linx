@@ -752,3 +752,87 @@ Value* keys__builtin_def(Value** environment, Value** arguments) {
 
     return Value__create_nil();
 }
+
+Value* valid4__linx_definition(Value** environment, Value** arguments) {
+    Value* len = Value__create_fn(&len__builtin_def, NULL, 0);
+
+    return linx__operator_lequals(
+        environment[0],
+        linx__operator_subtract(
+            linx__operator_call(len, (Value*[]){environment[1]}),
+            Value__from_double(1)));
+}
+
+Value* next3__linx_definition(Value** environment, Value** arguments) {
+    Value__copy(environment[0],
+                linx__operator_add(environment[0], Value__from_double(1)));
+    return linx__operator_subscript(
+        environment[1],
+        linx__operator_subtract(environment[0], Value__from_double(1)));
+}
+
+Value* valid2__linx_definition(Value** environment, Value** arguments) {
+    Value* len = Value__create_fn(&len__builtin_def, NULL, 0);
+
+    return linx__operator_lequals(
+        environment[0],
+        linx__operator_subtract(
+            linx__operator_call(len, (Value*[]){environment[1]}),
+            Value__from_double(1)));
+}
+
+Value* next1__linx_definition(Value** environment, Value** arguments) {
+    Value__copy(environment[0],
+                linx__operator_add(environment[0], Value__from_double(1)));
+
+    return Value__from_array(
+        (Value*[]){
+            linx__operator_subscript(
+                environment[1],
+                linx__operator_subtract(environment[0], Value__from_double(1))),
+            linx__operator_subscript(
+                environment[2],
+                linx__operator_subscript(
+                    environment[1],
+                    linx__operator_subtract(environment[0],
+                                            Value__from_double(1))))},
+        2);
+}
+
+Value* iterator__builtin_def(Value** environment, Value** arguments) {
+    Value* type = Value__create_fn(&type__builtin_def, NULL, 0);
+    Value* keys = Value__create_fn(&keys__builtin_def, NULL, 0);
+
+    Value* value = arguments[0];
+    Value* t = Value__create_nil();
+    Value__copy(t, linx__operator_call(type, (Value*[]){value}));
+    if (Value__to_bool(
+            linx__operator_equals(t, Value__from_charptr("object")))) {
+        Value* index = Value__create_nil();
+        Value__copy(index, Value__from_double(0));
+        Value* objKeys = Value__create_nil();
+        Value__copy(objKeys, linx__operator_call(keys, (Value*[]){value}));
+        Value* next = Value__create_fn(&next1__linx_definition,
+                                       (Value*[]){index, objKeys, value}, 3);
+        Value* valid = Value__create_fn(&valid2__linx_definition,
+                                        (Value*[]){index, value}, 2);
+        return Value__create_object_from_arrs(
+            (Value*[]){Value__from_charptr("next"),
+                       Value__from_charptr("valid")},
+            (Value*[]){next, valid}, 2);
+    }
+    if (Value__to_bool(linx__operator_or(
+            linx__operator_equals(t, Value__from_charptr("list")),
+            linx__operator_equals(t, Value__from_charptr("string"))))) {
+        Value* index = Value__create_nil();
+        Value__copy(index, Value__from_double(0));
+        Value* next = Value__create_fn(&next3__linx_definition,
+                                       (Value*[]){index, value}, 2);
+        Value* valid = Value__create_fn(&valid4__linx_definition,
+                                        (Value*[]){index, value}, 2);
+        return Value__create_object_from_arrs(
+            (Value*[]){Value__from_charptr("next"),
+                       Value__from_charptr("valid")},
+            (Value*[]){next, valid}, 2);
+    }
+}

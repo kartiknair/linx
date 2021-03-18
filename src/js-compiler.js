@@ -64,7 +64,34 @@ const codegenVisitor = {
 	},
 	ForStatement: (ident, iterable, body) => {
 		let iteratorSignature = Date.now()
-		return `let iterator__${iteratorSignature} = list.iterator(${codegen(
+
+		/*
+
+			for loops are syntactic sugar for while loops that make use of
+			the built-in iterator function. this means we can safely transform
+			a for loop into an appropriate while loop during codegen. for example
+			the following for loop:
+
+				for el in list {
+					// user programmer code
+				}
+
+			can be transported to:
+
+				let tmpIterator00000 = iterator(list)
+				
+				while tmpIterator00000.valid() {
+					let el = tmpIterator00000.next()
+					// user programmer code
+				}
+
+			the transformation involved declaring a variable in the current block
+			with a temporary iterator name that has the value of `iterator(iterable)`
+			& then wrapping user-programmer code in the `while` block with an additional
+			variable declaration to put `ident` in the for-loop body scope.
+		*/
+
+		return `let iterator__${iteratorSignature} = iterator(${codegen(
 			iterable
 		)})
         

@@ -93,3 +93,45 @@ function linx__truthy(value) {
 function print(value) {
 	console.log(toString(value))
 }
+
+function iterator(value) {
+	switch (type(value)) {
+		case 'nil':
+		case 'boolean':
+		case 'number':
+		case 'function':
+			return null
+		case 'object': {
+			let index = 0
+			let objKeys = Object.keys(value)
+			let objVals = Object.values(value)
+
+			let next = () => {
+				index++
+				return [objKeys[index - 1], objVals[index - 1]]
+			}
+			let valid = () => {
+				return index <= objVals.length - 1
+			}
+			return {
+				next,
+				valid,
+			}
+		}
+		case 'list':
+		case 'string': {
+			let index = 0
+			let next = () => {
+				index++
+				return value[index - 1]
+			}
+			let valid = () => {
+				return index <= value.length - 1
+			}
+			return {
+				next,
+				valid,
+			}
+		}
+	}
+}

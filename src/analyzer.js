@@ -3,7 +3,8 @@ const { Environment } = require('./environment')
 const { builtins } = require('./builtins')
 
 let compilingC = true
-let inFunction = false
+let inFunction = null
+let currentDepth = 0
 let closureCaptures = new Set()
 
 let env = new Environment()
@@ -18,7 +19,9 @@ function analyzeBlock({ statements }, localEnvironment, localClosureCaptures) {
 
 	env = localEnvironment
 	closureCaptures = localClosureCaptures
+	currentDepth++
 	statements = statements.map((stmt) => analyze(stmt, compilingC))
+	currentDepth--
 	env = prevEnvironment
 	closureCaptures = prevCaptures
 
@@ -28,12 +31,11 @@ function analyzeBlock({ statements }, localEnvironment, localClosureCaptures) {
 const analyzeVisitor = {
 	// decls
 	FunctionDeclaration: (ident, parameters, body) => {
-		inFunction = true
-
 		const func = {
 			closure: new Environment(env).clone(),
 			arity: () => parameters.length,
 			captures: [],
+			depth: currentDepth,
 		}
 
 		func.closure.define(ident.lexeme, null, false)
@@ -42,13 +44,15 @@ const analyzeVisitor = {
 			func.closure.define(param.lexeme, null, true)
 		})
 
+		inFunction = func
+
 		let funcCaptures = new Set()
 		body.statements = analyzeBlock(body, func.closure, funcCaptures)
 		func.captures = Array.from(funcCaptures)
 
 		env.define(ident.lexeme, func)
 
-		inFunction = false
+		inFunction = null
 
 		return {
 			ident,
@@ -87,6 +91,7 @@ const analyzeVisitor = {
 		}
 	},
 	ForStatement: (ident, iterable, body) => {
+		env.define(ident.lexeme, null, true)
 		return {
 			ident,
 			iterable: analyze(iterable, compilingC),
@@ -164,7 +169,8 @@ const analyzeVisitor = {
 			inFunction &&
 			!builtins.includes(target.ident.lexeme) &&
 			env.get(target.ident.lexeme) &&
-			env.get(target.ident.lexeme).steps > 0
+			currentDepth - env.get(target.ident.lexeme).steps <=
+				inFunction.depth
 		) {
 			// the first time this external variable is used is when assigning to it
 			if (!closureCaptures.has(target.ident.lexeme)) {
@@ -198,23 +204,24 @@ const analyzeVisitor = {
 		}
 	},
 	FunctionExpression: (parameters, body) => {
-		inFunction = true
-
 		const func = {
 			closure: new Environment(env).clone(),
 			arity: () => parameters.length,
 			captures: [],
+			depth: currentDepth,
 		}
 
 		parameters.forEach((param) => {
 			func.closure.define(param.lexeme, null, true)
 		})
 
+		inFunction = func
+
 		let funcCaptures = new Set()
 		body.statements = analyzeBlock(body, func.closure, funcCaptures)
 		func.captures = Array.from(closureCaptures)
 
-		inFunction = false
+		inFunction = null
 
 		return { parameters, body, func, type: 'FunctionExpression' }
 	},
@@ -224,7 +231,7 @@ const analyzeVisitor = {
 			inFunction &&
 			!builtins.includes(ident.lexeme) &&
 			env.get(ident.lexeme) &&
-			env.get(ident.lexeme).steps > 0
+			currentDepth - env.get(ident.lexeme).steps <= inFunction.depth
 		) {
 			if (!closureCaptures.has(ident.lexeme)) {
 				closureCaptures.add(ident.lexeme)
@@ -287,7 +294,6 @@ const analyzeVisitor = {
 
 function analyze(node, compilingCArg) {
 	compilingC = compilingCArg
-	console.log('global compilingC is: ', compilingC)
 	return walk(node, analyzeVisitor)
 }
 

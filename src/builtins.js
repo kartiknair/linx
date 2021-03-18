@@ -1,3 +1,3 @@
-const builtins = ['len', 'type', 'range', 'toString', 'keys']
+const builtins = ['len', 'type', 'range', 'toString', 'keys', 'iterator']
 
 module.exports = { builtins }

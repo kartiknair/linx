@@ -1,0 +1,25 @@
+fn join(list, delimiter) {
+    let result = ""
+
+    for i in 0..(len(list) - 1) {
+        print i
+        result = result + list[i]
+        if i != len(list) - 1 {
+            result = result + delimiter
+        }
+    }
+
+    return result
+}
+
+p := {
+    x: 34,
+    y: 45
+}
+for pair in p {
+    print "${pair[0]}: ${pair[1]}"
+}
+
+l := ["'ello", "there", "mate"]
+print 0..(len(l))
+print join(l, ",,, ")

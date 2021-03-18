@@ -364,7 +364,7 @@ class Parser {
 			else if (this.match('DOT')) {
 				// double dot: range operator (0..9)
 				if (this.match('DOT')) {
-					let end = this.primary()
+					let end = this.call()
 					return {
 						callee: {
 							ident: new Token(
